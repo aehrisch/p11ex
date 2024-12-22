@@ -35,7 +35,7 @@ jobs:
         if: matrix.os == 'ubuntu-24.04'
         run: |
           # Add Erlang Solutions repository
-          wget https://packages.erlang-solutions.com/erlang-solutions_2.0_all.deb
+          curl -o erlang-solutions_2.0_all.deb -vsL https://packages.erlang-solutions.com/erlang-solutions_2.0_all.deb
           sudo dpkg -i erlang-solutions_2.0_all.deb
           sudo apt-get update
           # Install recent versions of Erlang and Elixir
