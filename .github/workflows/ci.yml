@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        arch: [amd64, arm64]
+        otp: ['26.2']
+        elixir: ['1.16.1']
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: arm64
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
+
+      - name: Download PKCS#11 headers
+        run: |
+          cd c_src
+          curl -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h
+          curl -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h
+          curl -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y softhsm2 build-essential
+
+      - name: Initialize SoftHSM tokens
+        run: |
+          sudo mkdir -p /var/lib/softhsm/tokens/
+          sudo softhsm2-util --init-token --slot 0 --label "Test Token" --pin 1234 --so-pin 12345678
+
+      - name: Get dependencies
+        run: mix deps.get
+
+      - name: Run tests
+        run: mix test
+        env:
+          MIX_ENV: test
+
+      - name: Compile
+        run: mix compile
+        env:
+          MIX_ENV: test 
