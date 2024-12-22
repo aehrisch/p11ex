@@ -14,8 +14,6 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         arch: [amd64, arm64]
-        otp: ['26.2']
-        elixir: ['1.16.1']
 
     steps:
       - uses: actions/checkout@v3
@@ -26,11 +24,10 @@ jobs:
         with:
           platforms: arm64
 
-      - name: Set up Elixir
-        uses: erlef/setup-beam@v1
-        with:
-          otp-version: ${{ matrix.otp }}
-          elixir-version: ${{ matrix.elixir }}
+      - name: Install Elixir and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y elixir erlang-dev build-essential softhsm2
 
       - name: Download PKCS#11 headers
         run: |
@@ -38,11 +35,6 @@ jobs:
           curl -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h
           curl -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h
           curl -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y softhsm2 build-essential
 
       - name: Initialize SoftHSM tokens
         run: |
