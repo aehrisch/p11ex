@@ -34,9 +34,9 @@ jobs:
       - name: Install Elixir and dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-22.04'
         run: |
-          # Add Erlang Solutions repository
-          curl -o erlang-solutions_2.0_all.deb -vsL https://packages.erlang-solutions.com/erlang-solutions_2.0_all.deb
-          sudo dpkg -i erlang-solutions_2.0_all.deb
+          # Add Erlang Solutions repository directly
+          echo "deb https://binaries2.erlang-solutions.com/ubuntu jammy contrib" | sudo tee /etc/apt/sources.list.d/erlang-solutions.list
+          wget -O- https://packages.erlang-solutions.com/ubuntu/erlang_solutions.asc | sudo apt-key add -
           sudo apt-get update
           # Install recent versions of Erlang and Elixir
           sudo apt-get install -y esl-erlang elixir
