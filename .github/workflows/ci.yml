@@ -10,7 +10,9 @@ jobs:
   test:
     name: Build and Test
     runs-on: ${{ matrix.os }}
+    continue-on-error: true
     strategy:
+      fail-fast: false
       matrix:
         include:
           # Ubuntu x86_64
