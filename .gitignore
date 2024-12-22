@@ -8,3 +8,8 @@ erl_crash.dump
 *.beam
 /config/*.secret.exs
 .elixir_ls/
+# PKCS#11 headers, not sure about license, so not included in the repo
+c_src/pkcs11.h
+c_src/pkcs11t.h
+c_src/pkcs11f.h
+priv/
