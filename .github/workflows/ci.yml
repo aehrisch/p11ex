@@ -34,22 +34,50 @@ jobs:
       - name: Install Elixir and dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-22.04'
         run: |
+          # Install build dependencies
           sudo apt-get update
-          sudo apt-get install -y wget apt-transport-https gnupg2 software-properties-common
-          # Add Erlang Solutions repository directly
-          echo "deb https://binaries2.erlang-solutions.com/ubuntu jammy contrib" | sudo tee /etc/apt/sources.list.d/erlang-solutions.list
-          #wget -O- https://packages.erlang-solutions.com/ubuntu/erlang_solutions.asc | sudo apt-key add -
-          sudo apt-get update
-          # Install recent versions of Erlang and Elixir
-          sudo apt-get install -y esl-erlang elixir
-          # Install other dependencies
-          sudo apt-get install -y build-essential softhsm2
+          sudo apt-get install -y build-essential autoconf m4 libncurses5-dev libwxgtk3.0-gtk3-dev libgl1-mesa-dev libglu1-mesa-dev libpng-dev libssh-dev unixodbc-dev xsltproc fop libxml2-utils libncurses-dev openjdk-11-jdk softhsm2
+          
+          # Install asdf
+          git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.13.1
+          echo '. "$HOME/.asdf/asdf.sh"' >> ~/.bashrc
+          echo '. "$HOME/.asdf/completions/asdf.bash"' >> ~/.bashrc
+          source ~/.asdf/asdf.sh
+          
+          # Install Erlang and Elixir plugins
+          asdf plugin add erlang
+          asdf plugin add elixir
+          
+          # Install specific versions (adjust versions as needed)
+          asdf install erlang 26.2.1
+          asdf install elixir 1.15.7-otp-26
+          
+          # Set as global versions
+          asdf global erlang 26.2.1
+          asdf global elixir 1.15.7-otp-26
 
       - name: Install Elixir and dependencies (macOS)
         if: matrix.os == 'macos-latest'
         run: |
-          brew update
-          brew install elixir erlang softhsm
+          # Install asdf
+          brew install asdf
+          echo '. "$(brew --prefix asdf)/libexec/asdf.sh"' >> ~/.bashrc
+          source "$(brew --prefix asdf)/libexec/asdf.sh"
+          
+          # Install Erlang and Elixir plugins
+          asdf plugin add erlang
+          asdf plugin add elixir
+          
+          # Install build dependencies
+          brew install wxwidgets openssl@1.1 autoconf softhsm
+          
+          # Install specific versions (adjust versions as needed)
+          asdf install erlang 26.2.1
+          asdf install elixir 1.15.7-otp-26
+          
+          # Set as global versions
+          asdf global erlang 26.2.1
+          asdf global elixir 1.15.7-otp-26
 
       - name: Install Hex package manager
         run: mix local.hex --force
