@@ -33,28 +33,10 @@ jobs:
 
       - name: Install Elixir and dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-22.04'
-        run: |
-          # Install build dependencies
-          sudo apt-get update
-          sudo apt-get install -y build-essential autoconf m4 libncurses5-dev libwxgtk3.0-gtk3-dev libgl1-mesa-dev libglu1-mesa-dev libpng-dev libssh-dev unixodbc-dev xsltproc fop libxml2-utils libncurses-dev openjdk-11-jdk softhsm2
-          
-          # Install asdf
-          git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.13.1
-          echo '. "$HOME/.asdf/asdf.sh"' >> ~/.bashrc
-          echo '. "$HOME/.asdf/completions/asdf.bash"' >> ~/.bashrc
-          source ~/.asdf/asdf.sh
-          
-          # Install Erlang and Elixir plugins
-          asdf plugin add erlang
-          asdf plugin add elixir
-          
-          # Install specific versions (adjust versions as needed)
-          asdf install erlang 26.2.1
-          asdf install elixir 1.15.7-otp-26
-          
-          # Set as global versions
-          asdf global erlang 26.2.1
-          asdf global elixir 1.15.7-otp-26
+        uses: erlef/setup-beam@61e01a43a562a89bfc54c7f9a378ff67b03e4a21 # v1.16.0
+        with:
+          elixir-version: '1.17.4'
+          otp-version: '27.3'
 
       - name: Install Elixir and dependencies (macOS)
         if: matrix.os == 'macos-latest'
