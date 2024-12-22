@@ -88,10 +88,26 @@ jobs:
         run: mix deps.get
 
       - name: Run tests
-        run: mix test
+        run: mix test --cover
         env:
           MIX_ENV: test
+        continue-on-error: true
 
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: |
+            _build/test/lib/*/test-*.xml
+            cover/
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: "_build/test/lib/*/test-*.xml"
+          
       - name: Compile
         run: mix compile
         env:

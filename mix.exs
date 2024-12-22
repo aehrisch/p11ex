@@ -25,7 +25,8 @@ defmodule P11ex.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:elixir_make, "~> 0.7", runtime: false}
+      {:elixir_make, "~> 0.7", runtime: false},
+      {:junit_formatter, "~> 3.3", only: [:test]}
     ]
   end
 end
