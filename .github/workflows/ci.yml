@@ -59,25 +59,8 @@ jobs:
       - name: Install Elixir and dependencies (macOS)
         if: matrix.os == 'macos-latest'
         run: |
-          # Install asdf
-          brew install asdf
-          echo '. "$(brew --prefix asdf)/libexec/asdf.sh"' >> ~/.bashrc
-          source "$(brew --prefix asdf)/libexec/asdf.sh"
-          
-          # Install Erlang and Elixir plugins
-          asdf plugin add erlang
-          asdf plugin add elixir
-          
-          # Install build dependencies
-          brew install wxwidgets openssl@1.1 autoconf softhsm
-          
-          # Install specific versions (adjust versions as needed)
-          asdf install erlang 26.2.1
-          asdf install elixir 1.15.7-otp-26
-          
-          # Set as global versions
-          asdf global erlang 26.2.1
-          asdf global elixir 1.15.7-otp-26
+          # Install dependencies via Homebrew
+          brew install erlang elixir wxwidgets openssl@1.1 autoconf softhsm
 
       - name: Install Hex package manager
         run: mix local.hex --force
