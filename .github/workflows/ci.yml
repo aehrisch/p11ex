@@ -12,22 +12,33 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
         arch: [amd64, arm64]
+        exclude:
+          # Exclude ARM64 on Ubuntu runners (they don't support it directly)
+          - os: ubuntu-latest
+            arch: arm64
 
     steps:
       - uses: actions/checkout@v3
 
       - name: Set up QEMU
-        if: matrix.arch == 'arm64'
+        if: matrix.os == 'ubuntu-latest' && matrix.arch == 'arm64'
         uses: docker/setup-qemu-action@v2
         with:
           platforms: arm64
 
-      - name: Install Elixir and dependencies
+      - name: Install Elixir and dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y elixir erlang-dev build-essential softhsm2
+
+      - name: Install Elixir and dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew update
+          brew install elixir erlang softhsm
 
       - name: Install Hex package manager
         run: mix local.hex --force
@@ -39,10 +50,17 @@ jobs:
           curl -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h
           curl -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h
 
-      - name: Initialize SoftHSM tokens
+      - name: Initialize SoftHSM tokens (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo mkdir -p /var/lib/softhsm/tokens/
           sudo softhsm2-util --init-token --slot 0 --label "Test Token" --pin 1234 --so-pin 12345678
+
+      - name: Initialize SoftHSM tokens (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          mkdir -p ~/Library/softhsm/tokens/
+          softhsm2-util --init-token --slot 0 --label "Test Token" --pin 1234 --so-pin 12345678
 
       - name: Get dependencies
         run: mix deps.get
@@ -55,4 +73,4 @@ jobs:
       - name: Compile
         run: mix compile
         env:
-          MIX_ENV: test 
+          MIX_ENV: test
