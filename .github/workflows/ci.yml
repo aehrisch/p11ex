@@ -95,8 +95,8 @@ jobs:
             cover/
 
       - name: Publish Test Results
+        if: always() && matrix.os == 'ubuntu-22.04'
         uses: EnricoMi/publish-unit-test-result-action@v2
-        if: always()
         with:
           files: "_build/test/lib/*/test-*.xml"
           
