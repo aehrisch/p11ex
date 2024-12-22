@@ -1,7 +1,8 @@
 defmodule P11SoftHsmTest do
   use ExUnit.Case
 
-  @module_path "/opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"
+  @module_path System.get_env("PKCS11_MODULE") ||
+                raise "Environment variable PKCS11_MODULE is not set."
 
   test "failing load_module" do
     # path does not exist
