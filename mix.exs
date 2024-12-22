@@ -9,7 +9,9 @@ defmodule P11ex.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       compilers: [:elixir_make] ++ Mix.compilers(),
-      make_clean: ["clean"]
+      make_clean: ["clean"],
+      make_targets: ["all"]
+
     ]
   end
 
