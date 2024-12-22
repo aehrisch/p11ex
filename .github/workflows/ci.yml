@@ -37,8 +37,14 @@ jobs:
       - name: Install Elixir and dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-24.04'
         run: |
+          # Add Erlang Solutions repository
+          wget https://packages.erlang-solutions.com/erlang-solutions_2.0_all.deb
+          sudo dpkg -i erlang-solutions_2.0_all.deb
           sudo apt-get update
-          sudo apt-get install -y elixir erlang-dev build-essential softhsm2
+          # Install recent versions of Erlang and Elixir
+          sudo apt-get install -y esl-erlang elixir
+          # Install other dependencies
+          sudo apt-get install -y build-essential softhsm2
 
       - name: Install Elixir and dependencies (macOS)
         if: matrix.os == 'macos-latest'
