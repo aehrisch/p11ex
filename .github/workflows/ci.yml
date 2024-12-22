@@ -12,11 +12,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        arch: [amd64, arm64]
-        exclude:
-          # Exclude ARM64 on Ubuntu runners (they don't support it directly)
+        include:
+          # Ubuntu x86_64
           - os: ubuntu-latest
+            arch: amd64
+          # Ubuntu ARM64 (via QEMU)
+          - os: ubuntu-latest
+            arch: arm64
+          # macOS ARM64 (M1/M2)
+          - os: macos-latest
             arch: arm64
 
     steps:
