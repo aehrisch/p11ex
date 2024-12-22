@@ -29,6 +29,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y elixir erlang-dev build-essential softhsm2
 
+      - name: Install Hex package manager
+        run: mix local.hex --force
+
       - name: Download PKCS#11 headers
         run: |
           cd c_src
