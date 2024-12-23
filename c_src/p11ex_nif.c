@@ -22,6 +22,12 @@
     } \
     bool_var = CK_FALSE;
 
+#define ULONG_ARG(env, term, ulong_var) \
+    if (!enif_is_number(env, term)) { \
+      return enif_make_badarg(env); \
+    } \
+    enif_get_ulong(env, term, &ulong_var);
+
 // macro that wraps a CK_VERSION into a tuple
 #define wrap_version(env, v) \
     (enif_make_tuple2(env, enif_make_int(env, v.major), enif_make_int(env, v.minor)))
@@ -47,6 +53,7 @@ void resource_cleanup(ErlNifEnv* env, void* obj) {
 // Forward declarations
 static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM list_slots(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM token_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 
 static ERL_NIF_TERM ckr_to_atom(ErlNifEnv* env, CK_RV rv);
 static ERL_NIF_TERM to_elixir_string(ErlNifEnv* env, CK_UTF8CHAR_PTR utf8_array);
@@ -54,7 +61,8 @@ static ERL_NIF_TERM to_elixir_string(ErlNifEnv* env, CK_UTF8CHAR_PTR utf8_array)
 // NIF function registration
 static ErlNifFunc nif_funcs[] = {
   {"n_load_module", 1, load_module},
-  {"n_list_slots", 2, list_slots}
+  {"n_list_slots", 2, list_slots},
+  {"n_token_info", 2, token_info}
 };
 
 // Implementation of load_module/1
@@ -182,6 +190,103 @@ static ERL_NIF_TERM list_slots(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
     return enif_make_tuple2(env, enif_make_atom(env, "ok"), res);
 }
 
+static ERL_NIF_TERM token_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv;
+  CK_ULONG slot_id;
+  CK_TOKEN_INFO token_info;
+  p11_module_t* p11_module;
+  ERL_NIF_TERM map = enif_make_new_map(env);
+
+  REQUIRE_ARGS(env, argc, 2);
+
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  ULONG_ARG(env, argv[1], slot_id);
+
+  rv = p11_module->fun_list->C_GetTokenInfo(slot_id, &token_info);
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_GetTokenInfo", rv);
+  }
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "label"), 
+    to_elixir_string(env, token_info.label), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "manufacturer_id"), 
+    to_elixir_string(env, token_info.manufacturerID), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "model"), 
+    to_elixir_string(env, token_info.model), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "serial_number"), 
+    to_elixir_string(env, token_info.serialNumber), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "flags"), 
+    enif_make_ulong(env, token_info.flags), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "max_session_count"), 
+    enif_make_ulong(env, token_info.ulMaxSessionCount), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "session_count"), 
+    enif_make_ulong(env, token_info.ulSessionCount), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "max_rw_session_count"), 
+    enif_make_ulong(env, token_info.ulMaxRwSessionCount), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "rw_session_count"), 
+    enif_make_ulong(env, token_info.ulRwSessionCount), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "max_pin_len"), 
+    enif_make_ulong(env, token_info.ulMaxPinLen), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "min_pin_len"), 
+    enif_make_ulong(env, token_info.ulMinPinLen), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "total_public_memory"), 
+    enif_make_ulong(env, token_info.ulTotalPublicMemory), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "free_public_memory"), 
+    enif_make_ulong(env, token_info.ulFreePublicMemory), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "total_private_memory"), 
+    enif_make_ulong(env, token_info.ulTotalPrivateMemory), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "free_private_memory"), 
+    enif_make_ulong(env, token_info.ulFreePrivateMemory), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "hardware_version"), 
+    wrap_version(env, token_info.hardwareVersion), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "firmware_version"), 
+    wrap_version(env, token_info.firmwareVersion), &map);
+
+  enif_make_map_put(env, map, 
+    enif_make_atom(env, "utc_time"), 
+    to_elixir_string(env, token_info.utcTime), &map);
+
+  return enif_make_tuple2(env, enif_make_atom(env, "ok"), map);
+}
+
+
 // NIF module callbacks
 static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info) {
     const char* mod_name = "P11exModule";
@@ -210,7 +315,6 @@ static ERL_NIF_TERM to_elixir_string(ErlNifEnv *env, CK_UTF8CHAR_PTR utf8_array)
     memcpy(bin_data, utf8_array, utf8_length);
     return ex_binary;
 }
-
 
 static ERL_NIF_TERM
 ckr_to_atom(ErlNifEnv* env, CK_RV rv) {

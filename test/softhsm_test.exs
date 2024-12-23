@@ -24,6 +24,14 @@ defmodule P11SoftHsmTest do
     assert length(slots) == 2
 
     IO.inspect(slots, charlists: :as_lists)
+
+    assert {:ok, token_info} = P11ex.token_info(module, Enum.at(slots, 1).slot_id)
+    IO.inspect(token_info, charlists: :as_lists)
+    assert is_map(token_info)
+    assert token_info.label == "test"
+    assert token_info.manufacturer_id == "SoftHSM"
+    assert token_info.model == "SoftHSM"
+
   end
 
 end

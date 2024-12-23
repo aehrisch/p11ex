@@ -14,12 +14,7 @@ defmodule P11ex do
   def load_nifs do
     # Path to the compiled NIF library
     path = :filename.join(:code.priv_dir(:p11ex), "p11ex_nif")
-    case :erlang.load_nif(path, 0) do
-      :ok -> :ok
-      {:error, reason} ->
-        IO.puts "Failed to load NIF: #{reason}"
-        :error
-    end
+    :erlang.load_nif(path, 0)
   end
 
   @spec load_module(String.t()) :: {:ok, Module.t()} | {:error, String.t()}
@@ -35,6 +30,13 @@ defmodule P11ex do
     end
   end
 
+
+  def token_info(module, slot_id) do
+    with {:ok, token_info} <- n_token_info(module.p11_module, slot_id) do
+      {:ok, trim_map_strings(token_info)}
+    end
+  end
+
   defp interpret_slot(module, n_slot) do
     with {slot_id, desc, manufacturer_id, hardware_version, firmware_version, flags} <- n_slot do
       %Slot{
@@ -44,7 +46,7 @@ defmodule P11ex do
         manufacturer_id: String.trim_trailing(manufacturer_id),
         hardware_version: hardware_version,
         firmware_version: firmware_version,
-        flags: flags
+        flags: P11ex.Flags.to_atoms(:slot, flags) |> MapSet.to_list()
       }
     end
   end
@@ -58,4 +60,21 @@ defmodule P11ex do
     # This function will be implemented in NIF
     raise "NIF list_slots/1 not implemented"
   end
+
+  defp n_token_info(_p11_module, _slot_id) do
+    # This function will be implemented in NIF
+    raise "NIF token_info/1 not implemented"
+  end
+
+  defp trim_map_strings(map) when is_map(map) do
+    map
+    |> Map.new(fn {k, v} ->
+      {k, trim_value(v)}
+    end)
+    |> Map.update(:flags, 0, fn (v) -> P11ex.Flags.to_atoms(:token, v) |> MapSet.to_list() end)
+  end
+
+  defp trim_value(value) when is_binary(value), do: String.trim(value)
+  defp trim_value(value), do: value
+
 end
