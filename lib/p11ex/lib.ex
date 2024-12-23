@@ -1,4 +1,4 @@
-defmodule P11ex do
+defmodule P11ex.Lib do
 
   defmodule Module do
     @enforce_keys [:path, :p11_module]
@@ -37,6 +37,28 @@ defmodule P11ex do
     end
   end
 
+  def open_session(module, slot_id, flags) do
+    with {:ok, session} <- n_open_session(module.p11_module, slot_id, flags) do
+      {:ok, session}
+    end
+  end
+
+  def close_session(module, session) do
+    n_close_session(module.p11_module, session)
+  end
+
+  def session_info(module, session) do
+    n_session_info(module.p11_module, session)
+  end
+
+  def session_login(module, session, user_type, pin) do
+    n_session_login(module.p11_module, session, user_type, pin)
+  end
+
+  def session_logout(module, session) do
+    n_session_logout(module.p11_module, session)
+  end
+
   defp interpret_slot(module, n_slot) do
     with {slot_id, desc, manufacturer_id, hardware_version, firmware_version, flags} <- n_slot do
       %Slot{
@@ -64,6 +86,31 @@ defmodule P11ex do
   defp n_token_info(_p11_module, _slot_id) do
     # This function will be implemented in NIF
     raise "NIF token_info/1 not implemented"
+  end
+
+  defp n_open_session(_p11_module, _slot_id, _flags) do
+    # This function will be implemented in NIF
+    raise "NIF open_session/1 not implemented"
+  end
+
+  defp n_close_session(_p11_module, _session) do
+    # This function will be implemented in NIF
+    raise "NIF close_session/1 not implemented"
+  end
+
+  defp n_session_info(_p11_module, _session) do
+    # This function will be implemented in NIF
+    raise "NIF session_info/1 not implemented"
+  end
+
+  defp n_session_login(_p11_module, _session, _user_type, _pin) do
+    # This function will be implemented in NIF
+    raise "NIF session_login/1 not implemented"
+  end
+
+  defp n_session_logout(_p11_module, _session) do
+    # This function will be implemented in NIF
+    raise "NIF session_logout/1 not implemented"
   end
 
   defp trim_map_strings(map) when is_map(map) do

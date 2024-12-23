@@ -6,13 +6,15 @@
 
 #include "p11.h"
 
-// macros 
+/* macros */
 
+/* macro that checks if the number of arguments is correct */
 #define REQUIRE_ARGS(env, argc, expected) \
     if (argc != expected) { \
         return enif_make_badarg(env); \
     }
 
+/* macro that checks if the argument is an Erlang boolean, and if so, converts it to CK_BOOL. */
 #define BOOL_ARG(env, term, bool_var) \
     if (!enif_is_atom(env, term)) { \
         return enif_make_badarg(env); \
@@ -22,23 +24,24 @@
     } \
     bool_var = CK_FALSE;
 
+/* macro that checks if the argument is an Erlang number, and if so, converts it to CK_ULONG. */
 #define ULONG_ARG(env, term, ulong_var) \
     if (!enif_is_number(env, term)) { \
       return enif_make_badarg(env); \
     } \
     enif_get_ulong(env, term, &ulong_var);
 
-// macro that wraps a CK_VERSION into a tuple
+/* macro that wraps a CK_VERSION into a tuple */
 #define wrap_version(env, v) \
     (enif_make_tuple2(env, enif_make_int(env, v.major), enif_make_int(env, v.minor)))
 
-// macro that creates an error tuple with the function name and the error code
+/* macro that creates an error tuple with the function name and the error code */
 #define P11_error(env, fname, rv) \
     (enif_make_tuple2(env, \
       enif_make_atom(env, "error"), \
       enif_make_tuple2(env, enif_make_atom(env, fname), ckr_to_atom(env, rv))))
 
-
+/* struct that holds the PKCS#11 module and the function list */
 typedef struct {
    void *p11_module;
    CK_FUNCTION_LIST_PTR fun_list;
@@ -46,33 +49,52 @@ typedef struct {
 
 static ErlNifResourceType *p11_module_resource_type = NULL;
 
+/* struct that holds the session handle */
+typedef struct {
+  CK_SESSION_HANDLE session_handle;
+} p11_session_t;
+
+static ErlNifResourceType *p11_session_resource_type = NULL;
+
 void resource_cleanup(ErlNifEnv* env, void* obj) {
-  // TODO: Implement cleanup
+  /* TODO: Implement cleanup */
 }
 
-// Forward declarations
+/* Forward declarations */
 static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM list_slots(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM token_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 
+static ERL_NIF_TERM open_session(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM close_session(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM session_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM session_login(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM session_logout(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+
 static ERL_NIF_TERM ckr_to_atom(ErlNifEnv* env, CK_RV rv);
 static ERL_NIF_TERM to_elixir_string(ErlNifEnv* env, CK_UTF8CHAR_PTR utf8_array);
 
-// NIF function registration
+/* NIF function registration */
 static ErlNifFunc nif_funcs[] = {
   {"n_load_module", 1, load_module},
   {"n_list_slots", 2, list_slots},
-  {"n_token_info", 2, token_info}
+  {"n_token_info", 2, token_info},
+  {"n_open_session", 3, open_session},
+  {"n_close_session", 2, close_session},
+  {"n_session_info", 2, session_info},
+  {"n_session_login", 4, session_login},
+  {"n_session_logout", 2, session_logout}
 };
 
-// Implementation of load_module/1
+/* Implementation of load_module/1: Load a PKCS#11 module, get the function list, 
+   and initialize the module. Returns a resource that holds a reference the module and. */
 static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     char path[1024];
     CK_RV rv;
     CK_C_GetFunctionList c_get_function_list;
     CK_FUNCTION_LIST_PTR fun_list;
     p11_module_t* p11_module_rt = 
-      enif_alloc_resource(p11_module_resource_type, sizeof(p11_module_resource_type));
+      enif_alloc_resource(p11_module_resource_type, sizeof(p11_module_t));
         
     if (argc != 1) {
       return enif_make_badarg(env);
@@ -86,7 +108,7 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
         enif_make_atom(env, "invalid_path"));
     }
 
-    // load the PKCS#11 module
+    /* load the PKCS#11 module */
     void *pkcs11_lib = dlopen(path, RTLD_NOW);
     
     if (!pkcs11_lib) {
@@ -97,7 +119,7 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
         enif_make_atom(env, "dlopen_failed"));
     }
 
-    // C_GetFunctionList can be called before C_Initialize
+    /* C_GetFunctionList can be called before C_Initialize */
     c_get_function_list = (CK_C_GetFunctionList) dlsym(pkcs11_lib, "C_GetFunctionList");
     if (!c_get_function_list) {
       enif_release_resource(p11_module_rt);
@@ -107,7 +129,7 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
         enif_make_atom(env, "dlsym_failed"));
     }
 
-    // Now, actually call C_GetFunctionList
+    /* Now, actually call C_GetFunctionList */
     rv = c_get_function_list(&fun_list);
     if (rv != CKR_OK) {
         enif_release_resource(p11_module_rt);
@@ -126,7 +148,7 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
             enif_make_atom(env, "initialize_failed"));
     }
 
-    // store the module and function list in resource
+    /* Store the module and function list in resource */
     p11_module_rt->p11_module = pkcs11_lib;
     p11_module_rt->fun_list = fun_list;
     ERL_NIF_TERM p11_module_term = enif_make_resource(env, p11_module_rt);
@@ -134,6 +156,7 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     return enif_make_tuple2(env, enif_make_atom(env, "ok"), p11_module_term);
 }
 
+/* Implementation of list_slots/2: List the slots of a token with C_GetSlotList. */
 static ERL_NIF_TERM list_slots(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
     CK_RV rv;
@@ -190,6 +213,7 @@ static ERL_NIF_TERM list_slots(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
     return enif_make_tuple2(env, enif_make_atom(env, "ok"), res);
 }
 
+/* Implementation of token_info/2: Get the token info of a slot with C_GetTokenInfo. */
 static ERL_NIF_TERM token_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
   CK_RV rv;
@@ -286,10 +310,159 @@ static ERL_NIF_TERM token_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
   return enif_make_tuple2(env, enif_make_atom(env, "ok"), map);
 }
 
+static ERL_NIF_TERM open_session(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
-// NIF module callbacks
+  CK_RV rv;
+  CK_ULONG slot_id;
+  CK_FLAGS flags;
+  p11_module_t* p11_module;
+  p11_session_t* p11_session;
+
+  REQUIRE_ARGS(env, argc, 3);
+
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  ULONG_ARG(env, argv[1], slot_id);
+  ULONG_ARG(env, argv[2], flags);
+
+  p11_session = (p11_session_t*) enif_alloc_resource(p11_session_resource_type, sizeof(p11_session_t));
+
+  rv = p11_module->fun_list->C_OpenSession(slot_id, CKF_SERIAL_SESSION | flags, NULL_PTR, NULL_PTR, &p11_session->session_handle);
+  if (rv != CKR_OK) {
+    enif_release_resource(p11_session);
+    return P11_error(env, "C_OpenSession", rv);
+  }
+
+  return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_resource(env, p11_session));
+}
+
+static ERL_NIF_TERM close_session(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv;
+  p11_session_t* p11_session;
+  p11_module_t* p11_module;
+
+  REQUIRE_ARGS(env, argc, 2);
+
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  if (!enif_get_resource(env, argv[1], p11_session_resource_type, (void**)&p11_session)) {
+    return enif_make_badarg(env);
+  }
+
+  rv = p11_module->fun_list->C_CloseSession(p11_session->session_handle);
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_CloseSession", rv);
+  }
+
+  enif_release_resource(p11_session);
+  return enif_make_atom(env, "ok");
+}
+
+static ERL_NIF_TERM session_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv;
+  p11_session_t* p11_session;
+  p11_module_t* p11_module;
+  CK_SESSION_INFO session_info;
+  ERL_NIF_TERM result;
+
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  if (!enif_get_resource(env, argv[1], p11_session_resource_type, (void**)&p11_session)) {
+    return enif_make_badarg(env);
+  }
+
+  rv = p11_module->fun_list->C_GetSessionInfo(p11_session->session_handle, &session_info);
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_GetSessionInfo", rv);
+  }
+
+  result = enif_make_new_map(env);
+  enif_make_map_put(env, result, 
+    enif_make_atom(env, "slot_id"),
+    enif_make_ulong(env, session_info.slotID), &result);
+  enif_make_map_put(env, result, 
+    enif_make_atom(env, "state"),
+    enif_make_ulong(env, session_info.state), &result);
+  enif_make_map_put(env, result, 
+    enif_make_atom(env, "flags"),
+    enif_make_ulong(env, session_info.flags), &result);
+  enif_make_map_put(env, result, 
+    enif_make_atom(env, "device_error"),
+    enif_make_ulong(env, session_info.ulDeviceError), &result);
+
+  return enif_make_tuple2(env, enif_make_atom(env, "ok"), result);
+}
+
+static ERL_NIF_TERM session_login(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv;
+  p11_session_t* p11_session;
+  p11_module_t* p11_module;
+  CK_USER_TYPE user_type;
+  char pin[256];
+
+  REQUIRE_ARGS(env, argc, 4);
+
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  if (!enif_get_resource(env, argv[1], p11_session_resource_type, (void**)&p11_session)) {
+    return enif_make_badarg(env);
+  }
+
+  ULONG_ARG(env, argv[2], user_type);
+
+  if (!enif_get_string(env, argv[3], (char *) &pin, sizeof(pin), ERL_NIF_UTF8)) {
+    return enif_make_badarg(env);
+  }
+
+  rv = p11_module->fun_list->C_Login(p11_session->session_handle, 
+                                    user_type, 
+                                    (CK_UTF8CHAR_PTR)pin, 
+                                    strlen(pin));
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_Login", rv);
+  } 
+
+  return enif_make_atom(env, "ok");
+}
+
+static ERL_NIF_TERM session_logout(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv;
+  p11_session_t* p11_session;
+  p11_module_t* p11_module;
+
+  REQUIRE_ARGS(env, argc, 2);
+
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  } 
+
+  if (!enif_get_resource(env, argv[1], p11_session_resource_type, (void**)&p11_session)) {
+    return enif_make_badarg(env);
+  }
+
+  rv = p11_module->fun_list->C_Logout(p11_session->session_handle);
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_Logout", rv);
+  }
+
+  return enif_make_atom(env, "ok");
+}
+
+/* NIF module callbacks */
 static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info) {
-    const char* mod_name = "P11exModule";
+    const char* mod_name = "P11exLib";
     int flags = ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER;
 
     p11_module_resource_type = 
@@ -299,23 +472,30 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info) {
         return -1;
     }
 
+    // Add initialization for session resource type
+    p11_session_resource_type = 
+        enif_open_resource_type(env, NULL, mod_name, resource_cleanup, flags, NULL);
+    
+    if (p11_session_resource_type == NULL) {
+        return -1;
+    }
+
     return 0;
 }
 
-ERL_NIF_INIT(Elixir.P11ex, nif_funcs, load, NULL, NULL, NULL)
+ERL_NIF_INIT(Elixir.P11ex.Lib, nif_funcs, load, NULL, NULL, NULL)
 
-// helper functions
+/* helper functions */
 
 static ERL_NIF_TERM to_elixir_string(ErlNifEnv *env, CK_UTF8CHAR_PTR utf8_array) {
-
     ERL_NIF_TERM ex_binary;
     size_t utf8_length = sizeof(utf8_array);
     unsigned char *bin_data = enif_make_new_binary(env, utf8_length, &ex_binary);
-
     memcpy(bin_data, utf8_array, utf8_length);
     return ex_binary;
 }
 
+/* Return an Erlang atom for a CK_RV error code. */
 static ERL_NIF_TERM
 ckr_to_atom(ErlNifEnv* env, CK_RV rv) {
     switch(rv) {
