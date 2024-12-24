@@ -8,6 +8,8 @@
 
 /* macros */
 
+# define P11_DEBUG 1
+
 /* macro that checks if the number of arguments is correct */
 #define REQUIRE_ARGS(env, argc, expected) \
     if (argc != expected) { \
@@ -40,6 +42,16 @@
     (enif_make_tuple2(env, \
       enif_make_atom(env, "error"), \
       enif_make_tuple2(env, enif_make_atom(env, fname), ckr_to_atom(env, rv))))
+
+#define P11_call(rv, p11_module, func, args...) \
+    if (P11_DEBUG) { \
+        printf("P11_call: %s\n", #func); \
+    } \
+    rv = p11_module->fun_list->func(args); \
+    if (P11_DEBUG) { \
+        printf("P11_call: %s returned %lu\n", #func, rv); \
+    }
+
 
 /* struct that holds the PKCS#11 module and the function list */
 typedef struct {
@@ -174,16 +186,15 @@ static ERL_NIF_TERM list_slots(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
     }
     BOOL_ARG(env, argv[1], token_present);
 
-    // This actually only counts the slots
-    rv = p11_module->fun_list->C_GetSlotList(CK_FALSE, NULL_PTR, &slot_count);
+    /* This actually only counts the slots */
+    P11_call(rv, p11_module, C_GetSlotList, CK_FALSE, NULL_PTR, &slot_count);
     if (rv != CKR_OK) {
       return P11_error(env, "C_GetSlotList", rv);
     }
 
     slot_ids = (CK_SLOT_ID_PTR) malloc(slot_count * sizeof(CK_SLOT_ID));
 
-    printf("C_GetSlotList_1\n");
-    rv = p11_module->fun_list->C_GetSlotList(token_present, slot_ids, &slot_count);
+    P11_call(rv, p11_module, C_GetSlotList, token_present, slot_ids, &slot_count);
     if (rv != CKR_OK) {
       free(slot_ids);
       return P11_error(env, "C_GetSlotList", rv);
@@ -192,8 +203,7 @@ static ERL_NIF_TERM list_slots(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
     for (CK_ULONG i = 0; i < slot_count; i++) {
       ERL_NIF_TERM t;
 
-      printf("C_GetSlotList_2\n");
-      rv = p11_module->fun_list->C_GetSlotInfo(slot_ids[i], &slot_info);
+      P11_call(rv, p11_module, C_GetSlotInfo, slot_ids[i], &slot_info);
       if (rv != CKR_OK) {
         free(slot_ids);
         return P11_error(env, "C_GetSlotInfo", rv);
@@ -230,7 +240,7 @@ static ERL_NIF_TERM token_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
 
   ULONG_ARG(env, argv[1], slot_id);
 
-  rv = p11_module->fun_list->C_GetTokenInfo(slot_id, &token_info);
+  P11_call(rv, p11_module, C_GetTokenInfo, slot_id, &token_info);
   if (rv != CKR_OK) {
     return P11_error(env, "C_GetTokenInfo", rv);
   }
@@ -329,7 +339,7 @@ static ERL_NIF_TERM open_session(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 
   p11_session = (p11_session_t*) enif_alloc_resource(p11_session_resource_type, sizeof(p11_session_t));
 
-  rv = p11_module->fun_list->C_OpenSession(slot_id, CKF_SERIAL_SESSION | flags, NULL_PTR, NULL_PTR, &p11_session->session_handle);
+  P11_call(rv, p11_module, C_OpenSession, slot_id, CKF_SERIAL_SESSION | flags, NULL_PTR, NULL_PTR, &p11_session->session_handle);
   if (rv != CKR_OK) {
     enif_release_resource(p11_session);
     return P11_error(env, "C_OpenSession", rv);
@@ -354,7 +364,7 @@ static ERL_NIF_TERM close_session(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
     return enif_make_badarg(env);
   }
 
-  rv = p11_module->fun_list->C_CloseSession(p11_session->session_handle);
+  P11_call(rv, p11_module, C_CloseSession, p11_session->session_handle);
   if (rv != CKR_OK) {
     return P11_error(env, "C_CloseSession", rv);
   }
@@ -379,7 +389,7 @@ static ERL_NIF_TERM session_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
     return enif_make_badarg(env);
   }
 
-  rv = p11_module->fun_list->C_GetSessionInfo(p11_session->session_handle, &session_info);
+  P11_call(rv, p11_module, C_GetSessionInfo, p11_session->session_handle, &session_info);
   if (rv != CKR_OK) {
     return P11_error(env, "C_GetSessionInfo", rv);
   }
@@ -425,7 +435,7 @@ static ERL_NIF_TERM session_login(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
     return enif_make_badarg(env);
   }
 
-  rv = p11_module->fun_list->C_Login(p11_session->session_handle, 
+  P11_call(rv, p11_module, C_Login, p11_session->session_handle, 
                                     user_type, 
                                     (CK_UTF8CHAR_PTR)pin, 
                                     strlen(pin));
@@ -452,7 +462,7 @@ static ERL_NIF_TERM session_logout(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
     return enif_make_badarg(env);
   }
 
-  rv = p11_module->fun_list->C_Logout(p11_session->session_handle);
+  P11_call(rv, p11_module, C_Logout, p11_session->session_handle);
   if (rv != CKR_OK) {
     return P11_error(env, "C_Logout", rv);
   }
