@@ -161,12 +161,10 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     }
 
     rv = fun_list->C_Initialize(NULL);
-    if (rv != CKR_OK) {
+      if (rv != CKR_OK) {
         enif_release_resource(p11_module_rt);
         dlclose(pkcs11_lib);
-        return enif_make_tuple2(env, 
-            enif_make_atom(env, "error"),
-            enif_make_atom(env, "initialize_failed"));
+        P11_error(env, "C_Initialize", rv);
     }
 
     /* Store the module and function list in resource */
