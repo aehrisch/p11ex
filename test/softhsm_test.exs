@@ -28,7 +28,7 @@ defmodule P11SoftHsmTest do
     assert {:ok, token_info} = P11ex.Lib.token_info(module, Enum.at(slots, 1).slot_id)
     IO.inspect(token_info)
     assert is_map(token_info)
-    assert token_info.label == "test"
+    assert token_info.label == "Token_0"
     assert token_info.manufacturer_id == "SoftHSM"
     assert token_info.model == "SoftHSM"
 

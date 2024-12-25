@@ -68,13 +68,13 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo mkdir -p /var/lib/softhsm/tokens/
-          sudo softhsm2-util --init-token --slot 0 --label "Test Token 0" --pin 1234 --so-pin 12345678
+          sudo softhsm2-util --init-token --slot 0 --label "Token_0" --pin 1234 --so-pin 12345678
 
       - name: Initialize SoftHSM tokens (macOS)
         if: matrix.os == 'macos-latest'
         run: |
           mkdir -p ~/Library/softhsm/tokens/
-          softhsm2-util --init-token --slot 0 --label "Test Token 0" --pin 1234 --so-pin 12345678
+          softhsm2-util --init-token --slot 0 --label "Token_0" --pin 1234 --so-pin 12345678
 
       - name: Get dependencies
         run: mix deps.get
