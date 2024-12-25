@@ -10,6 +10,11 @@
 
 # define P11_DEBUG 1
 
+#define P11_debug_msg(msg) \
+  if (P11_DEBUG) { \
+    printf("P11_debug_msg: %s\n", msg); \
+  }
+
 /* macro that checks if the number of arguments is correct */
 #define REQUIRE_ARGS(env, argc, expected) \
     if (argc != expected) { \
@@ -107,9 +112,7 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     CK_FUNCTION_LIST_PTR fun_list;
     ERL_NIF_TERM error_str;
 
-    #if P11_DEBUG
-    printf("load_module\n");
-    #endif
+    P11_debug_msg("load_module: enter");
 
     p11_module_t* p11_module_rt = 
       enif_alloc_resource(p11_module_resource_type, sizeof(p11_module_t));
@@ -127,9 +130,11 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     }
 
     /* load the PKCS#11 module */
+    P11_debug_msg("load_module: dlopen");
     void *pkcs11_lib = dlopen(path, RTLD_NOW);
     
     if (!pkcs11_lib) {
+      P11_debug_msg("load_module: dlopen failed");
       enif_release_resource(p11_module_rt);
       error_str = enif_make_string(env, dlerror(), ERL_NIF_UTF8);
       return enif_make_tuple3(env, 
@@ -139,9 +144,13 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     }
 
     /* C_GetFunctionList can be called before C_Initialize */
+    P11_debug_msg("load_module: dlsym C_GetFunctionList");
     c_get_function_list = (CK_C_GetFunctionList) dlsym(pkcs11_lib, "C_GetFunctionList");
     if (!c_get_function_list) {
-      error_str = enif_make_string(env, dlerror(), ERL_NIF_UTF8);
+      char *error_cstr = dlerror();
+      error_str = enif_make_string(env, error_cstr, ERL_NIF_UTF8);
+      P11_debug_msg("load_module: dlsym C_GetFunctionList failed");
+      P11_debug_msg(error_cstr);
       enif_release_resource(p11_module_rt);
       dlclose(pkcs11_lib);
       return enif_make_tuple3(env, 
@@ -151,8 +160,10 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     }
 
     /* Now, actually call C_GetFunctionList */
+    P11_debug_msg("load_module: c_get_function_list");
     rv = c_get_function_list(&fun_list);
     if (rv != CKR_OK) {
+      P11_debug_msg("load_module: c_get_function_list failed");
         enif_release_resource(p11_module_rt);
         dlclose(pkcs11_lib);
         return enif_make_tuple2(env, 
@@ -160,11 +171,13 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
             enif_make_atom(env, "get_function_list_failed"));
     }
 
+    P11_debug_msg("load_module: fun_list->C_Initialize");
     rv = fun_list->C_Initialize(NULL);
-      if (rv != CKR_OK) {
-        enif_release_resource(p11_module_rt);
-        dlclose(pkcs11_lib);
-        P11_error(env, "C_Initialize", rv);
+    if (rv != CKR_OK) {
+      P11_debug_msg("load_module: fun_list->C_Initialize failed");
+      enif_release_resource(p11_module_rt);
+      dlclose(pkcs11_lib);
+      P11_error(env, "C_Initialize", rv);
     }
 
     /* Store the module and function list in resource */
@@ -172,6 +185,7 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     p11_module_rt->fun_list = fun_list;
     ERL_NIF_TERM p11_module_term = enif_make_resource(env, p11_module_rt);
 
+    P11_debug_msg("load_module: return");
     return enif_make_tuple2(env, enif_make_atom(env, "ok"), p11_module_term);
 }
 
@@ -482,9 +496,7 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info) {
     const char* mod_name = "P11exLib";
     int flags = ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER;
 
-    #if P11_DEBUG
-    printf("load: enter\n");
-    #endif
+    P11_debug_msg("NIF load: enter");
 
     p11_module_resource_type = 
         enif_open_resource_type(env, NULL, mod_name, resource_cleanup, flags, NULL);
@@ -501,18 +513,13 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info) {
         return -1;
     }
 
-    #if P11_DEBUG
-    printf("load: success\n");
-    #endif
-
+    P11_debug_msg("NIF load: success");
     return 0;
 }
 
 static void unload(ErlNifEnv* caller_env, void* priv_data) {
 
-  #if P11_DEBUG
-  printf("unload: success\n");
-  #endif
+  P11_debug_msg("unload: (not doing anything)");
 }
 
 ERL_NIF_INIT(Elixir.P11ex.Lib, nif_funcs, load, NULL, NULL, unload)
