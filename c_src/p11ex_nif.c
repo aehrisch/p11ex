@@ -105,6 +105,11 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     CK_RV rv;
     CK_C_GetFunctionList c_get_function_list;
     CK_FUNCTION_LIST_PTR fun_list;
+
+    #if P11_DEBUG
+    printf("load_module\n");
+    #endif
+
     p11_module_t* p11_module_rt = 
       enif_alloc_resource(p11_module_resource_type, sizeof(p11_module_t));
         
@@ -475,6 +480,10 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info) {
     const char* mod_name = "P11exLib";
     int flags = ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER;
 
+    #if P11_DEBUG
+    printf("load: enter\n");
+    #endif
+
     p11_module_resource_type = 
         enif_open_resource_type(env, NULL, mod_name, resource_cleanup, flags, NULL);
     
@@ -490,10 +499,21 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info) {
         return -1;
     }
 
+    #if P11_DEBUG
+    printf("load: success\n");
+    #endif
+
     return 0;
 }
 
-ERL_NIF_INIT(Elixir.P11ex.Lib, nif_funcs, load, NULL, NULL, NULL)
+static void unload(ErlNifEnv* caller_env, void* priv_data) {
+
+  #if P11_DEBUG
+  printf("unload: success\n");
+  #endif
+}
+
+ERL_NIF_INIT(Elixir.P11ex.Lib, nif_funcs, load, NULL, NULL, unload)
 
 /* helper functions */
 
