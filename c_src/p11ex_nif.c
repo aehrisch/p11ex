@@ -152,7 +152,6 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
       P11_debug_msg("load_module: dlsym C_GetFunctionList failed");
       P11_debug_msg(error_cstr);
       enif_release_resource(p11_module_rt);
-      dlclose(pkcs11_lib);
       return enif_make_tuple3(env, 
         enif_make_atom(env, "error"),
         enif_make_atom(env, "dlsym_failed"),
@@ -165,7 +164,6 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     if (rv != CKR_OK) {
       P11_debug_msg("load_module: c_get_function_list failed");
         enif_release_resource(p11_module_rt);
-        dlclose(pkcs11_lib);
         return enif_make_tuple2(env, 
             enif_make_atom(env, "error"),
             enif_make_atom(env, "get_function_list_failed"));
@@ -176,7 +174,6 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     if (rv != CKR_OK) {
       P11_debug_msg("load_module: fun_list->C_Initialize failed");
       enif_release_resource(p11_module_rt);
-      //dlclose(pkcs11_lib);
       return P11_error(env, "C_Initialize", rv);
     }
 
