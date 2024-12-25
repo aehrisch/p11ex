@@ -1,9 +1,6 @@
 defmodule P11SoftHsmTest do
   use ExUnit.Case
 
-  @module_path System.get_env("PKCS11_MODULE") ||
-                raise "Environment variable PKCS11_MODULE is not set."
-
   test "failing load_module" do
     # path does not exist
     assert {:error, :dlopen_failed, _err_msg} = P11ex.Lib.load_module("/does/not/exist")
@@ -11,11 +8,14 @@ defmodule P11SoftHsmTest do
 
   test "happy path" do
 
+    module_path = System.get_env("PKCS11_MODULE") ||
+                  raise "Environment variable PKCS11_MODULE is not set."
+
     # load the module
-    assert {:ok, module} = P11ex.Lib.load_module(@module_path)
+    assert {:ok, module} = P11ex.Lib.load_module(module_path)
     assert is_map(module)
     assert module.__struct__ == P11ex.Lib.Module
-    assert module.path == @module_path
+    assert String.ends_with?(module.path, "softhsm2.so")
     assert is_reference(module.p11_module)
 
     # list the slots

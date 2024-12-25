@@ -1,5 +1,7 @@
 defmodule P11ex.Lib do
 
+  require Logger
+
   defmodule Module do
     @enforce_keys [:path, :p11_module]
     defstruct path: nil, p11_module: nil
@@ -13,12 +15,14 @@ defmodule P11ex.Lib do
 
   def load_nifs do
     # Path to the compiled NIF library
+    Logger.info("Loading NIF p11ex_nif")
     path = :filename.join(:code.priv_dir(:p11ex), "p11ex_nif")
     :erlang.load_nif(path, 0)
   end
 
   @spec load_module(String.t()) :: {:ok, Module.t()} | {:error, String.t()}
   def load_module(path) do
+    Logger.info("Loading PKCS#11 module: #{path}")
     with {:ok, p11_module} <- n_load_module(String.to_charlist(path)) do
       {:ok, %Module{path: path, p11_module: p11_module}}
     end
