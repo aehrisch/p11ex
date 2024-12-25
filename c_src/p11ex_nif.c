@@ -105,6 +105,7 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     CK_RV rv;
     CK_C_GetFunctionList c_get_function_list;
     CK_FUNCTION_LIST_PTR fun_list;
+    ERL_NIF_TERM error_str;
 
     #if P11_DEBUG
     printf("load_module\n");
@@ -130,20 +131,23 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     
     if (!pkcs11_lib) {
       enif_release_resource(p11_module_rt);
-      dlclose(pkcs11_lib);
-      return enif_make_tuple2(env, 
+      error_str = enif_make_string(env, dlerror(), ERL_NIF_UTF8);
+      return enif_make_tuple3(env, 
         enif_make_atom(env, "error"),
-        enif_make_atom(env, "dlopen_failed"));
+        enif_make_atom(env, "dlopen_failed"),
+        error_str);
     }
 
     /* C_GetFunctionList can be called before C_Initialize */
     c_get_function_list = (CK_C_GetFunctionList) dlsym(pkcs11_lib, "C_GetFunctionList");
     if (!c_get_function_list) {
+      error_str = enif_make_string(env, dlerror(), ERL_NIF_UTF8);
       enif_release_resource(p11_module_rt);
       dlclose(pkcs11_lib);
-      return enif_make_tuple2(env, 
+      return enif_make_tuple3(env, 
         enif_make_atom(env, "error"),
-        enif_make_atom(env, "dlsym_failed"));
+        enif_make_atom(env, "dlsym_failed"),
+        error_str);
     }
 
     /* Now, actually call C_GetFunctionList */
