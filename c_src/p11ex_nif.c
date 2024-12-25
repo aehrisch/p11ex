@@ -175,7 +175,7 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
     rv = fun_list->C_Initialize(NULL);
     if (rv != CKR_OK) {
       P11_debug_msg("load_module: fun_list->C_Initialize failed");
-      //enif_release_resource(p11_module_rt);
+      enif_release_resource(p11_module_rt);
       //dlclose(pkcs11_lib);
       return P11_error(env, "C_Initialize", rv);
     }
