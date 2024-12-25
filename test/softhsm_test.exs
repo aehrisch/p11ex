@@ -6,7 +6,7 @@ defmodule P11SoftHsmTest do
 
   test "failing load_module" do
     # path does not exist
-    assert P11ex.Lib.load_module("/does/not/exist") == {:error, :dlopen_failed}
+    assert {:error, :dlopen_failed, _err_msg} = P11ex.Lib.load_module("/does/not/exist")
   end
 
   test "happy path" do
