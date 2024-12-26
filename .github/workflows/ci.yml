@@ -21,7 +21,7 @@ jobs:
       matrix:
         include:
           # Ubuntu x86_64
-          - os: ubuntu-24.04
+          - os: ubuntu-22.04
             arch: amd64
           # macOS ARM64 (M1/M2)
           - os: macos-latest
@@ -31,14 +31,14 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install Elixir and dependencies (Ubuntu)
-        if: matrix.os == 'ubuntu-24.04'
+        if: matrix.os == 'ubuntu-22.04'
         uses: erlef/setup-beam@61e01a43a562a89bfc54c7f9a378ff67b03e4a21 # v1.16.0
         with:
           elixir-version: '1.17.3'
           otp-version: '27.2'
 
       - name: Install SoftHSM (Ubuntu)
-        if: matrix.os == 'ubuntu-24.04'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get install -y softhsm
 
@@ -59,7 +59,7 @@ jobs:
           curl -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h
 
       - name: Initialize SoftHSM tokens (Ubuntu)
-        if: matrix.os == 'ubuntu-24.04'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo mkdir -p /var/lib/softhsm/tokens/
           sudo softhsm2-util --init-token --slot 0 --label "Token_0" --pin 1234 --so-pin 12345678
@@ -91,7 +91,7 @@ jobs:
             cover/
 
       - name: Publish Test Results
-        if: always() && matrix.os == 'ubuntu-24.04'
+        if: always() && matrix.os == 'ubuntu-22.04'
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           files: "_build/test/lib/*/test-*.xml"
