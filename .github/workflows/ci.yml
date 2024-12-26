@@ -39,6 +39,11 @@ jobs:
           echo '. "$HOME/.asdf/completions/asdf.bash"' >> ~/.bashrc
           . "$HOME/.asdf/asdf.sh"
           
+          # Install dependencies for Erlang
+          # https://github.com/asdf-vm/asdf-erlang/blob/master/README.md
+
+          sudo apt-get -y install build-essential autoconf m4 libncurses5-dev libwxgtk3.2-dev libwxgtk-webview3.2-dev libgl1-mesa-dev libglu1-mesa-dev libpng-dev libssh-dev unixodbc-dev xsltproc fop libxml2-utils libncurses-dev openjdk-11-jdk
+
           # Install Erlang and Elixir plugins
           asdf plugin add erlang
           asdf plugin add elixir
@@ -51,10 +56,14 @@ jobs:
           asdf global erlang 27.2
           asdf global elixir 1.17.3
 
+          # check versions
+          erl -version
+          elixir -v
+
       - name: Install SoftHSM (Ubuntu)
         if: matrix.os == 'ubuntu-24.04'
         run: |
-          sudo apt-get install -y softhsm
+          sudo apt-get install -y softhsm2
 
       - name: Install Elixir and dependencies (macOS)
         if: matrix.os == 'macos-latest'
