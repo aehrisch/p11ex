@@ -61,6 +61,9 @@ jobs:
           erl -version
           elixir -v
 
+          echo "elixir 1.17.3" > $HOME/.tool-versions
+          echo "erlang 27.2" >> $HOME/.tool-versions
+
       - name: Install SoftHSM (Ubuntu)
         if: matrix.os == 'ubuntu-24.04'
         run: |
@@ -73,7 +76,9 @@ jobs:
           brew install erlang elixir wxwidgets openssl@1.1 autoconf softhsm
 
       - name: Install Hex package manager
-        run: mix local.hex --force
+        run: |
+          . "$HOME/.asdf/asdf.sh" || true
+          mix local.hex --force
 
       - name: Download PKCS#11 headers
         run: |
@@ -97,10 +102,14 @@ jobs:
           sudo softhsm2-util --show-slots
 
       - name: Get dependencies
-        run: mix deps.get
+        run: |
+          . "$HOME/.asdf/asdf.sh" || true
+          mix deps.get
 
       - name: Run tests
-        run: mix test --cover
+        run: |
+          . "$HOME/.asdf/asdf.sh" || true
+          mix test --cover
         env:
           MIX_ENV: test
         continue-on-error: true
@@ -121,6 +130,8 @@ jobs:
           files: "_build/test/lib/*/test-*.xml"
           
       - name: Compile
-        run: mix compile
+        run: |
+          . "$HOME/.asdf/asdf.sh" || true
+          mix compile
         env:
           MIX_ENV: test
