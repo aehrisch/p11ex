@@ -13,8 +13,6 @@ defmodule P11ExTest.FindSecretKey do
     P11ex.TestHelper.setup_session()
   end
 
-
-  @tag focus: true
   test "find seck by label", context do
 
     @aes_key_labels
@@ -84,7 +82,6 @@ defmodule P11ExTest.FindSecretKey do
     end)
   end
 
-  @tag focus: true
   test "read typical attributes from secret key", context do
 
       keys = [{"aes_128", 16}, {"aes_192", 24}, {"aes_256", 32}]
