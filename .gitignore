@@ -13,3 +13,4 @@ c_src/pkcs11.h
 c_src/pkcs11t.h
 c_src/pkcs11f.h
 priv/
+.DS_Store
