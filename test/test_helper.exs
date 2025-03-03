@@ -25,10 +25,6 @@ defmodule P11ex.TestHelper do
     {:ok, slot} = P11ex.Module.find_slot_by_tokenlabel("Token_0")
     assert slot != nil
 
-    #Logger.info("test/setup_session: Opening session for slot #{slot.slot_id}")
-    #{:ok, session_handle} = P11ex.Module.open_session(slot.slot_id, [:rw_session, :serial_session])
-    #assert session_handle != nil
-
     Logger.info("test/setup_session: Starting Session GenServer for slot #{slot.slot_id}")
     {:ok, session_pid} = P11ex.Session.start_link([
       module: P11ex.Module,
