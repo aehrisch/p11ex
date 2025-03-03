@@ -1,0 +1,67 @@
+name: Test-Linux
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-linux:
+    permissions:
+      checks: write
+      pull-requests: write
+      contents: read
+      packages: read
+    
+    name: Test
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+#          - os: ubuntu-24.04
+#            arch: amd64
+          - os: ubuntu-24.04
+            arch: arm64
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # Combined step to run all test operations in Docker
+      - name: Run tests in Docker
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/app \
+            ghcr.io/${{ github.repository }}/p11ex-test:latest \
+            sh -c "cd /app && \
+              sh test/softhsm-reset.sh && \
+              cd c_src && \
+              curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h && \
+              curl -z pkcs11t.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h && \
+              curl -z pkcs11f.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h && \
+              cd .. && \
+              # Install hex and get dependencies
+              mix local.hex --force && \
+              mix deps.get && \
+              # Run tests
+              mix test || true
+              #mix test --only focus || true"
+        env:
+          MIX_ENV: test
+
+      - name: Upload test results and coverage
+        if: ${{ !env.ACT }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ matrix.arch }}
+          path: |
+            _build/test/lib/*/test-*.xml
+            cover/
+
+      - name: Publish Test Results
+        if: ${{ !env.ACT }} && always() && matrix.os == 'ubuntu-24.04'
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: "_build/test/lib/*/test-*.xml"

@@ -1,0 +1,133 @@
+defmodule P11SoftHsmTest do
+  use ExUnit.Case
+
+  setup_all do
+
+    token_label = Application.fetch_env!(:p11ex, :token_label)
+
+    {:ok, slot} = Module.find_slot_by_tokenlabel(token_label)
+
+    {:ok, session_pid} =
+        start_supervised({Session, [
+          module: Module, slot_id: slot.slot_id, flags: [:rw_session, :serial_session]
+        ]})
+
+    co_pin = Application.fetch_env!(:p11ex, :co_pin)
+    :ok = Session.login(session_pid, :user, co_pin)
+
+    {:ok, %{slot: slot, session_pid: session_pid}}
+  end
+
+  @tag focus: true
+  test "happy path 1", %{p11_module: p11_module} do
+
+    IO.inspect(p11_module, label: "Module value")
+
+    # check loaded the module
+    assert is_map(p11_module)
+    assert p11_module.__struct__ == P11ex.Lib.Module
+    assert String.ends_with?(p11_module.path, "softhsm2.so")
+    assert is_reference(p11_module.ref)
+
+    # list the slots
+    assert {:ok, slots} = P11ex.Lib.list_slots(p11_module, true)
+    assert is_list(slots)
+    assert length(slots) == 2
+
+    IO.inspect(slots, label: "Slots value")
+
+    slot_1 = Enum.at(slots, 1)
+
+    # get token info
+    assert {:ok, token_info} = P11ex.Lib.token_info(p11_module, slot_1.slot_id)
+    IO.inspect(token_info, label: "Token info value")
+    assert is_map(token_info)
+    assert token_info.label == "Token_0"
+    assert token_info.manufacturer_id == "SoftHSM"
+    assert token_info.model == "SoftHSM"
+
+    # open a session
+    assert {:ok, session} = P11ex.Lib.open_session(p11_module, slot_1.slot_id, [:rw_session, :serial_session])
+    assert is_map(session)
+    assert session.__struct__ == P11ex.Lib.Session
+    assert Map.has_key?(session, :handle)
+    assert is_integer(session.handle)
+
+    assert Map.has_key?(session, :module)
+    assert session.module == p11_module
+
+    assert Map.has_key?(session, :slot_id)
+    assert session.slot_id == slot_1.slot_id
+    IO.inspect(session, label: "Session value")
+
+    # get session info
+    assert {:ok, session_info} = P11ex.Lib.session_info(session)
+
+    assert is_map(session_info)
+    assert Map.has_key?(session_info, :slot_id)
+    assert session_info.slot_id == slot_1.slot_id
+
+    assert Map.has_key?(session_info, :state)
+    assert session_info.state == MapSet.new([:rw_public_session, :rw_user_functions])
+
+    assert Map.has_key?(session_info, :flags)
+    assert session_info.flags == MapSet.new([:rw_session, :serial_session])
+
+    # login as crypto officer
+    assert :ok == P11ex.Lib.session_login(session, :user, "1234")
+
+    assert {:ok, key_handle} = P11ex.Lib.generate_key(session, {:ckm_aes_key_gen},
+      [
+        {:cka_token, true},
+        {:cka_label, "test_key"},
+        {:cka_value_len, 16}
+      ])
+
+    IO.inspect(key_handle, label: "Key handle value")
+
+    assert {:ok, objects} = P11ex.Lib.find_objects(
+      session,
+      [
+        {:cka_token, true},
+        {:cka_class, :cko_secret_key},
+        {:cka_key_type, :ckk_aes}
+      ],
+      10)
+
+    IO.inspect(objects, label: "Objects value")
+    objects
+      |> Enum.each(fn object ->
+        attribs = [
+            :cka_label, :cka_class, :cka_id,
+            :cka_encrypt, :cka_decrypt, :cka_sign, :cka_verify,
+            :cka_value_len,
+            :cka_key_type, :cka_token, :cka_private, :cka_sensitive,
+            :cka_extractable]
+        assert {:ok, attributes} = P11ex.Lib.get_object_attributes(session, object, attribs)
+        IO.inspect(attributes, label: "Attributes value")
+      end)
+
+      a_block = <<1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>>
+      {:ok, encrypted} = P11ex.Lib.encrypt(session, {:ckm_aes_ecb}, key_handle, a_block)
+      IO.inspect(encrypted, label: "Encrypted value")
+
+      {:ok, decrypted} = P11ex.Lib.decrypt(session, {:ckm_aes_ecb}, key_handle, encrypted)
+      IO.inspect(decrypted, label: "Decrypted value")
+
+      assert a_block == decrypted
+
+      {:ok, random} = P11ex.Lib.generate_random(session, 32)
+      IO.inspect(random, label: "Random value")
+
+  end
+
+  @tag :skip
+  test "happy path 2", %{p11_module: p11_module, slot_id: slot_id, pin: pin} do
+    # Add debug inspection
+    IO.inspect(is_map(p11_module), label: "Is module a map?")
+
+    assert {:ok, session} = P11ex.Lib.open_session(p11_module, slot_id, [:rw_session, :serial_session])
+    assert :ok == P11ex.Lib.session_login(session, :user, pin)
+  end
+
+end

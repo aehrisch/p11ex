@@ -8,6 +8,7 @@ defmodule P11ex.MixProject do
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      test_coverage: [tool: ExCoveralls],
       compilers: [:elixir_make] ++ Mix.compilers(),
       make_clean: ["clean"],
       make_targets: ["all"]
@@ -26,7 +27,9 @@ defmodule P11ex.MixProject do
   defp deps do
     [
       {:elixir_make, "~> 0.7", runtime: false},
-      {:junit_formatter, "~> 3.3", only: [:test]}
+
+      {:junit_formatter, "~> 3.3", only: :test},
+      {:excoveralls, "~> 0.18", only: :test}
     ]
   end
 end

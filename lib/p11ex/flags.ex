@@ -54,10 +54,32 @@ defmodule P11ex.Flags do
     extension: 0x80000000
   }
 
+  @session_flags %{
+    rw_session: 0x00000002,
+    serial_session: 0x00000004
+  }
+
+  @session_state_flags %{
+    ro_public_session: 0x00000000,
+    ro_user_functions: 0x00000001,
+    rw_public_session: 0x00000002,
+    rw_user_functions: 0x00000003,
+    rw_so_functions: 0x00000004
+  }
+
+  @user_type %{
+    so: 0x00000000,
+    user: 0x00000001,
+    context_specific: 0x00000002
+  }
+
   @flag_types %{
     slot: @slot_flags,
     token: @token_flags,
-    mechanism: @mechanism_flags
+    mechanism: @mechanism_flags,
+    session: @session_flags,
+    session_state: @session_state_flags,
+    user_type: @user_type
   }
 
   @doc """

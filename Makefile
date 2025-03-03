@@ -25,11 +25,17 @@ else ifeq ($(UNAME_M),aarch64)
 endif
 
 # Base flags for all platforms
-CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR)
+CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -Wall -g
 
 # Linux specific flags
 ifeq ($(UNAME_S),Linux)
     LDFLAGS = -shared
+    
+    # Add ASAN flags for debug builds on Linux
+    ifdef DEBUG
+        CFLAGS += -fsanitize=address -fno-omit-frame-pointer
+        LDFLAGS += -fsanitize=address
+    endif
     
     # Add architecture-specific flags for Linux
     ifeq ($(ARCH),arm64)
