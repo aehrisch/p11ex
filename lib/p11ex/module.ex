@@ -1,12 +1,48 @@
 defmodule P11ex.Module do
 
+  @moduledoc """
+  A module is a `GenServer` that manages a PKCS#11 module and its loading state. A PKCS#11 module is a
+  shared library that implements a PKCS#11 provider.  A module should be loaded only once per application
+  or beam virtual machine. That is, you should only create one instance of `P11ex.Module` in your application
+  and add it to your supervision tree. Operations on the module should be performed through the `GenServer`
+  callbacks so that they are serialized.
+
+  ## Loading a module
+
+  To load a module, you can use the `start_link/1` function. The argument is the path to the module file.
+  The module will be loaded and initialized.
+
+  ```elixir
+  defmodule MyApp.Supervisor do
+    use Supervisor
+
+    def start_link(init_arg) do
+      Supervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
+    end
+
+    def init(init_arg) do
+      children = [
+        {P11ex.Module, "/usr/lib/softhsm/libsofthsm2.so"}
+      ]
+      Supervisor.init(children, strategy: :one_for_one)
+    end
+  end
+  ```
+  """
+
   use GenServer
   require Logger
 
   alias P11ex.Lib, as: Lib
+  alias P11ex.Lib.Slot, as: Slot
 
   # Public API
 
+  @doc """
+  Start the `P11ex.Module` GenServer. The argument is the path to the
+  PKCS#11 module file (shared library).
+  """
+  @spec start_link(binary()) :: GenServer.on_start()
   def start_link(args) do
     GenServer.start_link(__MODULE__, args, name: __MODULE__)
   end
@@ -28,14 +64,47 @@ defmodule P11ex.Module do
     end
   end
 
+  @doc """
+  List all slots in the module. The `token_present?` argument is optional and
+  defaults to `true`. If set to `true`, only slots with a token present are returned.
+  """
+  @spec list_slots(boolean()) :: {:ok, list(Slot.t())} | {:error, atom()}
   def list_slots(token_present?) when is_boolean(token_present?) do
     GenServer.call(__MODULE__, {:list_slots, token_present?})
   end
 
+  @doc """
+  Find the slot that contains a token with the given label.
+  """
+  @spec find_slot_by_tokenlabel(binary()) :: {:ok, Slot.t()} | {:ok, nil} | {:error, atom()}
   def find_slot_by_tokenlabel(label) when is_binary(label) do
     GenServer.call(__MODULE__, {:find_slot_by_tokenlabel, label})
   end
 
+  @doc """
+  Get information about a token in a slot. The token information is based on the
+  PKCS#11 structure `CK_TOKEN_INFO` and contains the following fields:
+
+  * `label` - The label of the token (a string)
+  * `manufacturer_id` - The manufacturer ID of the token (a string)
+  * `model` - The model of the token (a string)
+  * `serial_number` - The serial number of the token (a string)
+  * `flags` - The flags of the token (a list of atoms, see `P11ex.Flags`)
+  * `max_session_count` - The maximum number of sessions that can be opened for the token (an integer)
+  * `session_count` - The number of sessions that are currently open for the token (an integer)
+  * `max_rw_session_count` - The maximum number of read/write sessions that can be opened for the token (an integer)
+  * `rw_session_count` - The number of read/write sessions that are currently open for the token (an integer)
+  * `max_pin_len` - The maximum length of the PIN for the token (an integer)
+  * `min_pin_len` - The minimum length of the PIN for the token (an integer)
+  * `total_public_memory` - The total amount of public memory in the token (an integer)
+  * `free_public_memory` - The amount of free public memory in the token (an integer)
+  * `total_private_memory` - The total amount of private memory in the token (an integer)
+  * `free_private_memory` - The amount of free private memory in the token (an integer)
+  * `hardware_version` - The hardware version of the token (a tuple of integers)
+  * `firmware_version` - The firmware version of the token (a tuple of integers)
+  * `utc_time` - The UTC time of the token (a string)
+  """
+  @spec token_info(Slot.t()) :: {:ok, map()} | {:error, atom()}
   def token_info(slot) do
     GenServer.call(__MODULE__, {:token_info, slot})
   end
@@ -44,14 +113,37 @@ defmodule P11ex.Module do
     GenServer.call(__MODULE__, {:open_session, slot, flags})
   end
 
+  @doc """
+  Register a successful login for a token in the PKCS#11 slot managed
+  by this instance of `P11ex.Module`. User type is `:user` or `:so`
+  (security officer). If set, subsequent operations on the token will
+  be skipped. This is necessary to avoid login errors of value
+  `:ckr_user_already_logged_in`. Can also be set to `nil` to unregister
+  a login.
+  """
+  @spec register_login(atom() | nil) :: :ok
   def register_login(user_type) do
     GenServer.cast(__MODULE__, {:register_login, user_type})
   end
 
+  @doc """
+  Check if a successful login has been registered for a token in the
+  PKCS#11 slot managed by this instance of `P11ex.Module`. The return value
+  is `:user` or `:so` (security officer) if a login has been registered, or
+  `nil` if no login has been registered.
+  """
+  @spec login_type() :: atom() | nil
   def login_type() do
     GenServer.call(__MODULE__, :login_type)
   end
 
+  @doc """
+  Returns a reference to the handle of the PKCS#11 module. Usually, this
+  is not needed by the application, but it can be useful if you need to
+  perform operations on the module that are not otherwise provided by this
+  library.
+  """
+  @spec module_handle() :: reference()
   def module_handle()  do
     GenServer.call(__MODULE__, :module_handle)
   end
