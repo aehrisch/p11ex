@@ -9,10 +9,16 @@ defmodule P11ex.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test,
+        "coveralls.github": :test
+      ],
       compilers: [:elixir_make] ++ Mix.compilers(),
       make_clean: ["clean"],
       make_targets: ["all"]
-
     ]
   end
 

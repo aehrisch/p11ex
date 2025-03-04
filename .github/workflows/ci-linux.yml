@@ -45,11 +45,11 @@ jobs:
               # Install hex and get dependencies
               mix local.hex --force && \
               mix deps.get && \
-              # Run tests
-              mix test || true
-              #mix test --only focus || true"
+              # Run tests with coverage
+              mix coveralls.github || true"
         env:
           MIX_ENV: test
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload test results and coverage
         if: ${{ !env.ACT }}
