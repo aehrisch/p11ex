@@ -1,4 +1,32 @@
 defmodule P11ex.Session do
+  @moduledoc """
+  This module is a `GenServer` that manages a PKCS#11 session. A session is used
+  to interact with a token, e.g. generate keys, encrypt data, decrypt data, etc. Sessions
+  are created by the `P11ex.Module` module using the `open_session/3` function. Depending on
+  the type of token multiple for the same token can be opened in parallel (e.g. if the token is
+  a network HSM). One session can only be used in a serialised way, i.e. only one operation can be
+  performed at a time. Additionally, sessions have a state. This state can be non-persistent keys associated
+  with the session or the state of an encryption or decryption operation.
+
+  Technically, most PKCS#11 functions require to login to the token first using a PIN. That is, the
+  login state is not connected to a particular session opened on a token. Many tokens raise an `:cka_already_logged_in`
+  error if a PIN is provided for a session that is already logged in. The `P11ex.Session` module tries to
+  make handling of the login state more easy by tracking the login state of the session. That is, only the
+  first call to `login/3` will actually login to the token. Subsequent calls to `login/3` will check if
+  the session is already logged in and skip the login if so.
+
+  ## Usage
+
+  The following examples show how to log into a token and create a new session.
+
+```elixir
+  {:ok, module} = P11ex.Module.start_link("/usr/lib/softhsm/libsofthsm2.so")
+  {:ok, slot} = P11ex.Module.find_slot_by_tokenlabel("Token_0")
+
+  {:ok, session} = P11ex.Session.start_link(module: module, slot_id: slot.slot_id, flags: [:rw_session])
+  :ok = P11ex.Session.login(session, :user, "1234")
+```
+  """
 
   use GenServer
 
@@ -19,7 +47,13 @@ defmodule P11ex.Session do
     end
   end
 
+  @doc """
+  Initialize the session `GenServer`. This requires the `:module` (a `P11ex.Lib.ModuleHandle.t()`)
+  and the `:slot_id` (an integer) of the slot the session is opened on. Additionally, the `:flags`
+  keyword argument can be used to pass additional flags to the `open_session/3` function.
+  """
   @impl true
+  @spec init(Keyword.t()) :: {:ok, map()} | {:error, atom()}
   def init(args) do
 
     module = Keyword.fetch!(args, :module)
@@ -41,19 +75,58 @@ defmodule P11ex.Session do
 
   # Public API
 
+  @doc """
+  Get information about the session. The result is a map with the following keys:
+  * `:slot_id` - the slot ID of the session
+  * `:state` - the state of the session
+  * `:flags` - the flags of the session
+  * `:device_error` - the device error of the session
+  """
+  @spec info(server :: GenServer.server()) :: {:ok, map()} | {:error, atom()}
   def info(server \\ __MODULE__) do
     GenServer.call(server, :info)
   end
 
+  @doc """
+  Login to the session. The `user_type` can be `:user` or `:so`.
+  The `pin` is the PIN of the user. The `P11ex.Session` module will check
+  if a login already succeeded for the session and skip the login if so. This
+  avoids `:cka_already_logged_in` errors.
+  """
+  @spec login(server :: GenServer.server(), user_type :: atom(), pin :: String.t()) :: :ok | {:error, atom()}
   def login(server \\ __MODULE__, user_type, pin) do
     GenServer.call(server, {:login, user_type, pin})
   end
 
+  @doc """
+  Logout from the session.
+  """
+  @spec logout(server :: GenServer.server()) :: :ok | {:error, atom()}
   def logout(server \\ __MODULE__) do
     GenServer.call(server, :logout)
   end
 
-  def find_objects(server \\ __MODULE__, attributes, max_hits) do
+  @doc """
+  Find objects in the session. The `attributes` is a list of tuples where the first
+  element is the attribute type and the second element is the value to match. The
+  `max_hits` is the maximum number of hits to return. The result is a list of
+  `P11ex.Lib.ObjectHandle.t()` objects.
+
+  This example shows how to find all secret keys in the session.
+
+  ```elixir
+    {:ok, objects} = P11ex.Session.find_objects(session, [{:cka_class, :cko_secret_key}], 10)
+  ```
+
+  To find all secret keys with the label "my_key" use the following:
+
+  ```elixir
+    {:ok, objects} = P11ex.Session.find_objects(session, [{:cka_class, :cko_secret_key}, {:cka_label, "my_key"}], 10)
+  ```
+  """
+  @spec find_objects(server :: GenServer.server(), attributes :: [{atom(), any()}], max_hits :: non_neg_integer()) :: {:ok, [ObjectHandle.t()]} | {:error, atom()}
+  def find_objects(server \\ __MODULE__, attributes, max_hits)
+    when is_list(attributes) and is_integer(max_hits) and max_hits >= 0 do
     GenServer.call(server, {:find_objects, attributes, max_hits})
   end
 

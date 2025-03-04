@@ -1,21 +1,134 @@
 defmodule P11ex.Lib do
+  @moduledoc """
+  This module contains the core functionality for the `P11ex` library and provides
+  the low-level API for interacting with PKCS#11 modules. In general, you should not
+  use this module directly. Instead, use the higher-level `P11ex.Module` and `P11ex.Session`
+  modules instead.
+  """
 
   require Logger
 
   defmodule ModuleHandle do
-    @enforce_keys [:path, :ref]
-    defstruct path: nil, ref: nil
+    @moduledoc """
+    Represents a reference to a dynamically loaded PKCS#11 module.
+    """
 
+    @typedoc """
+    The path to the shared PKCS#11 library module file. Must always be a valid string.
+    """
+    @type path :: String.t()
+
+    @typedoc """
+    NIF reference to the loaded PKCS#11 module.
+    """
+    @type ref :: reference()
+
+    @typedoc """
+    A struct representing a loaded PKCS#11 module.
+
+    ## Fields:
+      - `path` (String.t()): The file path of the module (always required).
+      - `ref` (reference()): A NIF reference to the loaded module.
+    """
+    @type t :: %__MODULE__{path: path(), ref: ref()}
+
+    @enforce_keys [:path, :ref]
+    defstruct path: "", ref: nil
   end
 
   defmodule Slot do
+    @moduledoc """
+    Represents a PKCS#11 slot. A slot can contain a token (e.g. a smart card) or a token emulator
+    (e.g. a software token).
+    """
+
+    @typedoc """
+    The PKCS#11 module that the slot belongs to.
+    """
+    @type pkcs11_module :: P11ex.Lib.ModuleHandle.t()
+
+    @typedoc """
+    The slot identifier.
+    """
+    @type slot_id :: non_neg_integer()
+
+    @typedoc """
+    The slot description.
+    """
+    @type description :: String.t()
+
+    @typedoc """
+    The manufacturer ID of the slot.
+    """
+    @type manufacturer_id :: String.t()
+
+    @typedoc """
+    The hardware version of the slot.
+    """
+    @type hardware_version :: {non_neg_integer(), non_neg_integer()}
+
+    @typedoc """
+    The firmware version of the slot.
+    """
+    @type firmware_version :: {non_neg_integer(), non_neg_integer()}
+
+    @typedoc """
+    The flags of the slot. See `P11ex.Flags` for more information.
+    """
+    @type flags :: MapSet.t(atom())
+
+    @typedoc """
+    A struct representing a PKCS#11 slot.
+    """
+    @type t :: %__MODULE__{
+      module: pkcs11_module(),
+      slot_id: slot_id(),
+      description: description(),
+      manufacturer_id: manufacturer_id(),
+      hardware_version: hardware_version(),
+      firmware_version: firmware_version(),
+      flags: flags()
+    }
+
+    @enforce_keys [:module, :slot_id, :description, :manufacturer_id, :hardware_version, :firmware_version, :flags]
     defstruct [:module, :slot_id, :description, :manufacturer_id, :hardware_version, :firmware_version, :flags]
   end
 
   defmodule SessionHandle do
-    @enforce_keys [:module, :handle, :slot_id]
+    @moduledoc """
+    Represents a PKCS#11 session. A session is used to interact with a token.
+    """
+
+    @typedoc """
+    The PKCS#11 module that the session belongs to.
+    """
+    @type pkcs11_module :: P11ex.Lib.ModuleHandle.t()
+
+    @typedoc """
+    The handle of the session.
+    """
+    @type handle :: non_neg_integer()
+
+    @typedoc """
+    The slot identifier of the session.
+    """
+    @type slot_id :: non_neg_integer()
+
+    @typedoc """
+    A struct representing a PKCS#11 session.
+    """
+    @type t :: %__MODULE__{
+      module: pkcs11_module(),
+      handle: handle(),
+      slot_id: slot_id()
+    }
+
     defstruct [:module, :handle, :slot_id]
 
+    @doc """
+    Create a new session handle.
+    """
+    @spec new(pkcs11_module(), handle(), slot_id()) :: t()
     def new(%ModuleHandle{} = module, handle, slot_id)
         when is_integer(handle) and handle >= 0 and
              is_integer(slot_id) and slot_id >= 0 do
@@ -28,9 +141,35 @@ defmodule P11ex.Lib do
   end
 
   defmodule ObjectHandle do
+    @moduledoc """
+    Represents a PKCS#11 object. An object stored in the token. This can be a key,
+    a certificate, a secret key, etc.
+    """
+
+    @typedoc """
+    The PKCS#11 session that the object belongs to.
+    """
+    @type session :: P11ex.Lib.SessionHandle.t()
+
+    @typedoc """
+    The handle of the object which is unsigned integer identifying the object.
+    """
+    @type handle :: non_neg_integer()
+
+    @typedoc """
+    A struct representing a PKCS#11 object.
+    """
+    @type t :: %__MODULE__{
+      session: session(),
+      handle: handle()
+    }
     @enforce_keys [:session, :handle]
     defstruct [:session, :handle]
 
+    @doc """
+    Create a new object handle.
+    """
+    @spec new(session(), handle()) :: t()
     def new(%SessionHandle{} = session, handle)
         when is_integer(handle) and handle >= 0 do
       %__MODULE__{session: session, handle: handle}
@@ -42,14 +181,29 @@ defmodule P11ex.Lib do
   end
 
   defmodule ObjectAttributes do
+    @moduledoc """
+    This module defines sets of attributes for PKCS#11 objects.
+    """
 
+    @doc """
+    Attributes that all kinds of objects have.
+    """
+    @spec common() :: MapSet.t(atom())
     def common(), do: MapSet.new([:cka_class])
 
-    def storage() do
-      MapSet.union(common(),
+    @doc """
+    Attributes related to the storage of objects. Most objects have these attributes.
+    """
+    @spec storage() :: MapSet.t(atom())
+    def storage(), do: MapSet.union(common(),
         MapSet.new([:cka_label, :cka_modifiable, :cka_private, :cka_token]))
-    end
 
+
+    @doc """
+    Attributes related to keys. This are attributes can be found on secrets keys,
+    public keys, and private keys.
+    """
+    @spec key() :: MapSet.t(atom())
     def key() do
       MapSet.union(storage(),
         MapSet.new([:cka_derive, :cka_end_date, :cka_id,
@@ -57,6 +211,10 @@ defmodule P11ex.Lib do
                     :cka_local, :cka_start_date]))
     end
 
+    @doc """
+    Attributes that can be found on secret keys.
+    """
+    @spec secret_key() :: MapSet.t(atom())
     def secret_key() do
       MapSet.union(key(),
         MapSet.new([:cka_always_sensitive, :cka_check_value,
