@@ -25,12 +25,12 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: p11ex_test.dockerfile
           push: ${{ !env.ACT }}
-          load: ${{ env.ACT }}
+#          load: ${{ env.ACT }}
           tags: |
             ghcr.io/${{ github.repository }}/p11ex-test:latest
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}
