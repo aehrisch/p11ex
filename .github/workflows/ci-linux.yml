@@ -45,7 +45,7 @@ jobs:
               # Install hex and get dependencies
               mix local.hex --force && \
               mix deps.get && \
-              # Run tests with coverage && \
+              # Run tests with coverage
               mix coveralls.html && \
               mix coveralls.github || true"
         env:
