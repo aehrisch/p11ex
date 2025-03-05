@@ -50,8 +50,11 @@ jobs:
               mix local.hex --force && \
               mix deps.get && \
               # Run tests with coverage
+              mix coveralls.json && \
               mix coveralls.html && \
-              mix coveralls.github || true"
+              mix coveralls.github && \
+              # Generate documentation
+              mix docs || true"
 
       - name: Upload test results and coverage
         if: ${{ !env.ACT }}
@@ -62,6 +65,7 @@ jobs:
             _build/test/lib/*/test-*.xml
             cover/
             cover/excoveralls.json
+            doc/
 
       - name: Publish Test Results
         if: ${{ !env.ACT }} && always() && matrix.os == 'ubuntu-24.04'
