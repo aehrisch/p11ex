@@ -52,9 +52,7 @@ jobs:
               # Run tests with coverage
               mix coveralls.json && \
               mix coveralls.html && \
-              mix coveralls.github && \
-              # Generate documentation
-              mix docs || true"
+              mix coveralls.github || true"
 
       - name: Upload test results and coverage
         if: ${{ !env.ACT }}
