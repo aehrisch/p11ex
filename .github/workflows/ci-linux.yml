@@ -45,7 +45,8 @@ jobs:
               # Install hex and get dependencies
               mix local.hex --force && \
               mix deps.get && \
-              # Run tests with coverage
+              # Run tests with coverage && \
+              mix coveralls.html && \
               mix coveralls.github || true"
         env:
           MIX_ENV: test
@@ -55,10 +56,11 @@ jobs:
         if: ${{ !env.ACT }}
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.arch }}
+          name: test-results-${{ matrix.arch }}.zip
           path: |
             _build/test/lib/*/test-*.xml
             cover/
+            cover/excoveralls.json
 
       - name: Publish Test Results
         if: ${{ !env.ACT }} && always() && matrix.os == 'ubuntu-24.04'
