@@ -441,12 +441,6 @@ defmodule P11ex.Lib do
     char_list |> List.to_string() |> String.trim_trailing()
   end
 
-  defp frob_date(char_list) when is_list(char_list) do
-    char_list
-    |> List.to_string() |> String.trim_trailing()
-    |> Date.from_iso8601()
-  end
-
   #    _   _ ___ _____   _____                 _   _
   #   | \ | |_ _|  ___| |  ___|   _ _ __   ___| |_(_) ___  _ __  ___
   #   |  \| || || |_    | |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __|

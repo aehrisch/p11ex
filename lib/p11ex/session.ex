@@ -322,25 +322,4 @@ defmodule P11ex.Session do
     {:reply, res, state}
   end
 
-  ###
-  ### Private functions
-  ###
-
-  defp flag_for_user_type(user_type) do
-    case user_type do
-      :user -> :rw_user_functions
-      :so -> :rw_so_functions
-      _ -> nil
-    end
-  end
-
-  defp check_logged_in?(state, user_type) do
-    with {:ok, info} <- Lib.session_info(state.session) do
-      Logger.debug("check_logged_in? info=#{inspect(info)}")
-      flag = flag_for_user_type(user_type)
-      Logger.debug("check_logged_in? #{inspect(info.state)} #{inspect(flag)}")
-      {:ok, MapSet.member?(info.state, flag)}
-    end
-  end
-
 end
