@@ -19,13 +19,13 @@ defmodule P11ex.Session do
 
   The following examples show how to log into a token and create a new session.
 
-```elixir
+  ```elixir
   {:ok, module} = P11ex.Module.start_link("/usr/lib/softhsm/libsofthsm2.so")
   {:ok, slot} = P11ex.Module.find_slot_by_tokenlabel("Token_0")
 
   {:ok, session} = P11ex.Session.start_link(module: module, slot_id: slot.slot_id, flags: [:rw_session])
   :ok = P11ex.Session.login(session, :user, "1234")
-```
+  ```
   """
 
   use GenServer
