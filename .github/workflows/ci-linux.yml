@@ -49,10 +49,9 @@ jobs:
               # Install hex and get dependencies
               mix local.hex --force && \
               mix deps.get && \
-              # Run tests with coverage
-              mix coveralls.json && \
-              mix coveralls.html && \
-              mix coveralls.github || true"
+              mix compile --warnings-as-errors && \
+              mix credo --strict && \
+              mix test --cover || true"
 
       - name: Upload test results and coverage
         if: ${{ !env.ACT }}
