@@ -189,22 +189,21 @@ defmodule P11ex.Lib do
     Attributes that all kinds of objects have.
     """
     @spec common() :: MapSet.t(atom())
-    def common(), do: MapSet.new([:cka_class])
+    def common, do: MapSet.new([:cka_class])
 
     @doc """
     Attributes related to the storage of objects. Most objects have these attributes.
     """
     @spec storage() :: MapSet.t(atom())
-    def storage(), do: MapSet.union(common(),
+    def storage, do: MapSet.union(common(),
         MapSet.new([:cka_label, :cka_modifiable, :cka_private, :cka_token]))
-
 
     @doc """
     Attributes related to keys. This are attributes can be found on secrets keys,
     public keys, and private keys.
     """
     @spec key() :: MapSet.t(atom())
-    def key() do
+    def key do
       MapSet.union(storage(),
         MapSet.new([:cka_derive, :cka_end_date, :cka_id,
                     :cka_id, :cka_key_gen_mechanism, :cka_key_type,
@@ -215,7 +214,7 @@ defmodule P11ex.Lib do
     Attributes that can be found on secret keys.
     """
     @spec secret_key() :: MapSet.t(atom())
-    def secret_key() do
+    def secret_key do
       MapSet.union(key(),
         MapSet.new([:cka_always_sensitive, :cka_check_value,
           :cka_decrypt, :cka_encrypt,
@@ -359,9 +358,7 @@ defmodule P11ex.Lib do
   def get_object_attributes(%SessionHandle{} = session, %ObjectHandle{} = object, attribute_set) do
     attribute_names = MapSet.to_list(attribute_set)
     all_atoms = Enum.all?(attribute_names, fn name -> is_atom(name) end)
-    if not all_atoms do
-      {:error, :invalid_attribute_names}
-    else
+    if all_atoms do
       res = n_get_object_attributes(session.module.ref, session.handle, object.handle, attribute_names)
       case res do
         {:ok, lst} ->
@@ -379,6 +376,8 @@ defmodule P11ex.Lib do
           {:ok, ok_set, fail_list}
         error -> error
       end
+    else
+      {:error, :invalid_attribute_names}
     end
   end
 

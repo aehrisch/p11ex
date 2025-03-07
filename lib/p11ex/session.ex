@@ -33,9 +33,9 @@ defmodule P11ex.Session do
   require Logger
 
   alias P11ex.Lib, as: Lib
-  alias P11ex.Module, as: Module
   alias P11ex.Lib.ObjectAttributes, as: ObjectAttributes
   alias P11ex.Lib.ObjectHandle, as: ObjectHandle
+  alias P11ex.Module, as: Module
 
   def start_link(args) do
     # Allow starting without a name
@@ -158,7 +158,7 @@ defmodule P11ex.Session do
     GenServer.call(server, :encrypt_final)
   end
 
-  def decrypt_init(server \\ __MODULE__, mechanism, %ObjectHandle{} =key) do
+  def decrypt_init(server \\ __MODULE__, mechanism, %ObjectHandle{} = key) do
     GenServer.call(server, {:decrypt_init, mechanism, key})
   end
 

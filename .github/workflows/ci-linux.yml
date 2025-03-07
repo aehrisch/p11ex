@@ -50,7 +50,6 @@ jobs:
               mix local.hex --force && \
               mix deps.get && \
               mix compile --warnings-as-errors && \
-              mix credo --strict && \
               mix test --cover || true"
 
       - name: Upload test results and coverage

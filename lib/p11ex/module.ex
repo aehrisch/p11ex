@@ -133,7 +133,7 @@ defmodule P11ex.Module do
   `nil` if no login has been registered.
   """
   @spec login_type() :: atom() | nil
-  def login_type() do
+  def login_type do
     GenServer.call(__MODULE__, :login_type)
   end
 
@@ -144,7 +144,7 @@ defmodule P11ex.Module do
   library.
   """
   @spec module_handle() :: reference()
-  def module_handle()  do
+  def module_handle do
     GenServer.call(__MODULE__, :module_handle)
   end
 

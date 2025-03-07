@@ -14,7 +14,7 @@ defmodule P11ex.TestHelper do
 
   import ExUnit.Assertions
   require Logger
-  def get_module_path!() do
+  def get_module_path! do
     System.get_env("PKCS11_MODULE") ||
       raise "Environment variable PKCS11_MODULE is not set."
   end

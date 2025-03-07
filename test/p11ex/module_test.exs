@@ -21,7 +21,6 @@ defmodule P11ex.ModuleTest do
   test "find_slot_by_tokenlabel" do
     token_label = Application.fetch_env!(:p11ex, :token_label)
     {:ok, slot} = Module.find_slot_by_tokenlabel(token_label)
-    IO.inspect(slot, label: "slot in test find_slot_by_tokenlabel")
     assert is_map(slot)
     assert slot.manufacturer_id == "SoftHSM project"
     assert {2, minor} = slot.firmware_version

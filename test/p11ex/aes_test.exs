@@ -2,14 +2,13 @@ defmodule P11ExTest.AesKeygen do
 
   use ExUnit.Case, async: false
 
-  alias P11ex.Session, as: Session
-  alias P11ex.Module, as: Module
   alias P11ex.Lib, as: Lib
+  alias P11ex.Module, as: Module
+  alias P11ex.Session, as: Session
 
   setup_all do
     P11ex.TestHelper.setup_session()
   end
-
 
   # This test generates an AES key and computes the key check value (KCV). The KCV
   # computed must match the key check value stored in the attribute (cka_check_value).
@@ -61,7 +60,6 @@ defmodule P11ExTest.AesKeygen do
       ])
 
     {:ok, attribs, []} = Session.read_object(context.session_pid, key, :cko_secret_key)
-    IO.inspect(attribs, label: "attribs")
     assert attribs.cka_id == key_id
     assert attribs.cka_label == "test_key"
     assert attribs.cka_value_len == 16
@@ -87,7 +85,7 @@ defmodule P11ExTest.AesKeygen do
         {:cka_id, key_id}
       ])
 
-    [16, 32, 128, 256, 1024, 8192, 16384]
+    [16, 32, 128, 256, 1024, 8192, 16_384]
     |> Enum.each(fn size ->
       data = :crypto.strong_rand_bytes(size)
       assert {:ok, encrypted} = Session.encrypt(context.session_pid, {:ckm_aes_ecb}, key, data)
@@ -111,7 +109,7 @@ defmodule P11ExTest.AesKeygen do
         {:cka_id, key_id}
       ])
 
-    data_sizes = [16, 32, 128, 256, 1024, 8192, 16384]
+    data_sizes = [16, 32, 128, 256, 1024, 8192, 16_384]
     part_sizes = [8, 16, 64, 100, 256]
 
     data_sizes
@@ -296,7 +294,7 @@ defmodule P11ExTest.AesKeygen do
     # The counter_bits parameter is of the wrong type.
     assert {:error, :invalid_counter_bits_parameter, _ignore} =
       Session.encrypt(context.session_pid,
-        {:ckm_aes_ctr, %{iv: iv_valid, counter_bits: <<1,2,3>>}},
+        {:ckm_aes_ctr, %{iv: iv_valid, counter_bits: <<1, 2, 3>>}},
         key, data)
 
     # The counter_bits parameter is negative

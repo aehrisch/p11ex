@@ -2,9 +2,10 @@ defmodule P11ExTest.FindSecretKey do
 
   use ExUnit.Case, async: false
 
-  alias P11ex.Session, as: Session
-  alias P11ex.Module, as: Module
   alias P11ex.Lib, as: Lib
+  alias P11ex.Module, as: Module
+  alias P11ex.Session, as: Session
+
   alias GenServer
 
   @aes_key_labels ["aes_128", "aes_192", "aes_256"]
