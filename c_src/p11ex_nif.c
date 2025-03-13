@@ -572,16 +572,18 @@ static ErlNifFunc nif_funcs[] = {
    and initialize the module. Returns a resource that holds a reference the module and. */
 static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     char path[1024];
-    CK_RV rv;
-    CK_C_GetFunctionList c_get_function_list;
-    CK_FUNCTION_LIST_PTR fun_list;
+    CK_RV rv = CKR_GENERAL_ERROR;
+    CK_C_GetFunctionList c_get_function_list = NULL;
+    CK_FUNCTION_LIST_PTR fun_list = NULL;
     ERL_NIF_TERM error_str;
     ERL_NIF_TERM ok_term;
     ERL_NIF_TERM p11_module_term;
-    void *pkcs11_lib;
-
-    REQUIRE_ARGS(env, argc, 1);
+    void *pkcs11_lib = NULL;
+    
     P11_debug("load_module: enter");
+    REQUIRE_ARGS(env, argc, 1);
+
+    secure_zero(path, sizeof(path));
 
     rv = enif_get_string(env, argv[0], path, sizeof(path), ERL_NIF_UTF8);
     if (rv <= 0) {
@@ -663,14 +665,15 @@ static ERL_NIF_TERM load_module(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
 /* Implementation of list_slots/2: List the slots of a token with C_GetSlotList. */
 static ERL_NIF_TERM list_slots(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
-    CK_RV rv;
-    CK_BBOOL token_present;
-    p11_module_t* p11_module;
-    CK_ULONG slot_count;
-    CK_SLOT_ID_PTR slot_ids;
-    CK_SLOT_INFO slot_info;
+    CK_RV rv = CKR_GENERAL_ERROR;
+    CK_BBOOL token_present = CK_FALSE;
+    p11_module_t* p11_module = NULL;
+    CK_ULONG slot_count = 0;
+    CK_SLOT_ID_PTR slot_ids = NULL;
+    CK_SLOT_INFO slot_info = {0};
     ERL_NIF_TERM res = enif_make_list(env, 0);
 
+    P11_debug("list_slots: enter");
     REQUIRE_ARGS(env, argc, 2);
 
     if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
@@ -719,12 +722,13 @@ static ERL_NIF_TERM list_slots(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
 /* Implementation of token_info/2: Get the token info of a slot with C_GetTokenInfo. */
 static ERL_NIF_TERM token_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
-  CK_RV rv;
-  CK_ULONG slot_id;
-  CK_TOKEN_INFO token_info;
-  p11_module_t* p11_module;
+  CK_RV rv = CKR_GENERAL_ERROR;
+  CK_ULONG slot_id = 0;
+  CK_TOKEN_INFO token_info = {0};
+  p11_module_t* p11_module = NULL;
   ERL_NIF_TERM map = enif_make_new_map(env);
 
+  P11_debug("token_info: enter");
   REQUIRE_ARGS(env, argc, 2);
 
   if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
@@ -816,9 +820,11 @@ static ERL_NIF_TERM token_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
 }
 
 static ERL_NIF_TERM finalize(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
-  CK_RV rv;
-  p11_module_t* p11_module;
 
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+
+  P11_debug("finalize: enter");
   REQUIRE_ARGS(env, argc, 1);
 
   if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
@@ -835,12 +841,13 @@ static ERL_NIF_TERM finalize(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]
 
 static ERL_NIF_TERM open_session(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
-  CK_RV rv;
-  CK_ULONG slot_id;
-  CK_FLAGS flags;
-  p11_module_t* p11_module;
-  CK_SESSION_HANDLE session_handle;
+  CK_RV rv = CKR_GENERAL_ERROR;
+  CK_ULONG slot_id = 0;
+  CK_FLAGS flags = 0;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
 
+  P11_debug("open_session: enter");
   REQUIRE_ARGS(env, argc, 3);
 
   if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
@@ -865,10 +872,11 @@ static ERL_NIF_TERM open_session(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 
 static ERL_NIF_TERM close_session(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
-  CK_RV rv;
-  p11_module_t* p11_module;
-  CK_SESSION_HANDLE session_handle;
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
 
+  P11_debug("close_session: enter");
   REQUIRE_ARGS(env, argc, 2);
 
   if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
@@ -887,10 +895,11 @@ static ERL_NIF_TERM close_session(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
 
 static ERL_NIF_TERM close_all_sessions(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
-  CK_RV rv;
-  p11_module_t* p11_module;
-  CK_SESSION_HANDLE session_handle;
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
 
+  P11_debug("close_all_sessions: enter");
   REQUIRE_ARGS(env, argc, 2);
 
   if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
@@ -909,12 +918,13 @@ static ERL_NIF_TERM close_all_sessions(ErlNifEnv* env, int argc, const ERL_NIF_T
 
 static ERL_NIF_TERM session_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
-  CK_RV rv;
-  p11_module_t* p11_module;
-  CK_SESSION_HANDLE session_handle;
-  CK_SESSION_INFO session_info;
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  CK_SESSION_INFO session_info = {0};
   ERL_NIF_TERM result;
 
+  P11_debug("session_info: enter");
   REQUIRE_ARGS(env, argc, 2);
 
   if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
@@ -947,13 +957,15 @@ static ERL_NIF_TERM session_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 
 static ERL_NIF_TERM session_login(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
-  CK_RV rv;
-  CK_SESSION_HANDLE session_handle;
-  p11_module_t* p11_module;
-  CK_USER_TYPE user_type;
+  CK_RV rv = CKR_GENERAL_ERROR;
+  CK_SESSION_HANDLE session_handle = 0;
+  p11_module_t* p11_module = NULL;
+  CK_USER_TYPE user_type = 0;
   char pin[MAX_PIN_LENGTH];
-  size_t pin_length;
+  size_t pin_length = 0;
+  char *copy_pin = NULL;
 
+  P11_debug("session_login: enter");
   REQUIRE_ARGS(env, argc, 4);
 
   if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
@@ -963,15 +975,25 @@ static ERL_NIF_TERM session_login(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
   ULONG_ARG(env, argv[1], session_handle);
   ULONG_ARG(env, argv[2], user_type);
 
+  secure_zero(pin, sizeof(pin));
   pin_length = enif_get_string(env, argv[3], pin, MAX_PIN_LENGTH, ERL_NIF_UTF8);
   if (pin_length <= 0) {
     return enif_make_badarg(env);
   }
   pin_length--; /* enif_get_string includes the null terminator */
 
+  copy_pin = (char *) calloc(pin_length + 1, sizeof(char));
+  if (copy_pin == NULL) {
+    return enif_make_tuple2(env, 
+              enif_make_atom(env, "error"), 
+              enif_make_atom(env, "memory_allocation_failed"));
+  }
+  memcpy(copy_pin, pin, pin_length);
+  
   P11_call(rv, p11_module, C_Login, session_handle, 
-           user_type, (CK_UTF8CHAR_PTR) pin, (CK_ULONG) pin_length);
+           user_type, (CK_UTF8CHAR_PTR) copy_pin, (CK_ULONG) pin_length);
 
+  free(copy_pin);
   if (rv != CKR_OK) {
     return P11_error(env, "C_Login", rv);
   }
@@ -982,10 +1004,11 @@ static ERL_NIF_TERM session_login(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
 // TODO check and test
 static ERL_NIF_TERM session_logout(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
-  CK_RV rv;
-  CK_SESSION_HANDLE session_handle;
-  p11_module_t* p11_module;
+  CK_RV rv = CKR_GENERAL_ERROR;
+  CK_SESSION_HANDLE session_handle = 0;
+  p11_module_t* p11_module = NULL;
 
+  P11_debug("session_logout: enter");
   REQUIRE_ARGS(env, argc, 2);
 
   if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
@@ -1011,7 +1034,7 @@ static ERL_NIF_TERM generate_key(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
   CK_ATTRIBUTE_PTR attribute_list = NULL;
   CK_ULONG attribute_count = 0;
   ERL_NIF_TERM conversion_result;
-  CK_MECHANISM mechanism;
+  CK_MECHANISM mechanism = {0};
   ERL_NIF_TERM mech_conversion_result;
 
   P11_debug("generate_key: enter");
@@ -1078,15 +1101,15 @@ static ERL_NIF_TERM generate_key(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 
 static ERL_NIF_TERM find_objects(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
-  CK_RV rv;
-  p11_module_t* p11_module;
-  CK_SESSION_HANDLE session_handle;
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
   ERL_NIF_TERM conversion_result;
   CK_ULONG max_hits = 0;
   CK_ULONG hit_count = 0;
   CK_ATTRIBUTE_PTR attribute_list = NULL;
   CK_ULONG attribute_count = 0;
-  CK_OBJECT_HANDLE_PTR object_list;
+  CK_OBJECT_HANDLE_PTR object_list = NULL;
 
   P11_debug("find_objects: enter");
   REQUIRE_ARGS(env, argc, 4);
@@ -1161,12 +1184,13 @@ static ERL_NIF_TERM term_to_attrib_template(
   CK_ATTRIBUTE_PTR* out_attribute_list,
   CK_ULONG_PTR out_attribute_count) {
 
-  unsigned list_length = 0, attribute_index;
+  unsigned list_length = 0;
+  unsigned attribute_index = 0;
   ERL_NIF_TERM head, tail, current_list;
   CK_ATTRIBUTE* attributes = NULL;
   CK_ATTRIBUTE_TYPE attribute_type;
   char attribute_name[MAX_ATTRIBUTE_NAME_LENGTH];
-  attribute_info_t* attr_info;
+  attribute_info_t* attr_info = NULL;
 
   P11_debug("term_to_attrib_template: enter");
   P11_debug("term_to_attrib_template: term_list=%T", term_list);
@@ -1180,6 +1204,7 @@ static ERL_NIF_TERM term_to_attrib_template(
   }
   P11_debug("term_to_attrib_template: list_length=%lu", list_length);
 
+  secure_zero(attribute_name, sizeof(attribute_name));
   attributes = (CK_ATTRIBUTE_PTR) calloc(sizeof(CK_ATTRIBUTE), list_length);
   if (attributes == NULL) {
     return enif_make_tuple2(env, 
@@ -1242,13 +1267,13 @@ static ERL_NIF_TERM term_to_attrib_template(
 
 static ERL_NIF_TERM get_object_attributes(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
-  CK_RV rv;
+  CK_RV rv = CKR_GENERAL_ERROR;
   CK_ATTRIBUTE_PTR templates = NULL;
   CK_ULONG template_count = 0;
   ERL_NIF_TERM prep_result, attr_list;
-  p11_module_t* p11_module;
-  CK_SESSION_HANDLE session_handle;
-  CK_OBJECT_HANDLE object_handle;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  CK_OBJECT_HANDLE object_handle = 0;
 
   P11_debug("get_object_attributes: enter");
   REQUIRE_ARGS(env, argc, 4);
@@ -1373,9 +1398,12 @@ static ERL_NIF_TERM term_to_attributes(
 
   ERL_NIF_TERM mem_error_term;
   ERL_NIF_TERM head, tail, current_list;
-  unsigned list_length = 0, all_values_copied, resize_needed;
-  unsigned value_buffer_size, growth_factor;
-  attribute_info_t* attr_info;
+  unsigned list_length = 0;
+  unsigned all_values_copied = 0;
+  unsigned resize_needed = 0;
+  unsigned value_buffer_size = 0;
+  unsigned growth_factor = 0;
+  attribute_info_t* attr_info = NULL;
   CK_ATTRIBUTE* attributes = NULL;
   void* value_buffer = NULL;
 
@@ -1549,9 +1577,9 @@ static ERL_NIF_TERM term_to_attributes(
 /* Return 0 on success, negative value on error */
 static ERL_NIF_TERM term_to_mechanism(ErlNifEnv* env, ERL_NIF_TERM term, CK_MECHANISM_PTR mechanism) {
 
-  int num_elements, mech_type_result;
+  int num_elements = 0, mech_type_result = 0;
   ERL_NIF_TERM param_conv_result;
-  const ERL_NIF_TERM* elements;
+  const ERL_NIF_TERM* elements = NULL;
   CK_MECHANISM_TYPE mechanism_type = 0;
 
   P11_debug("term_to_mechanism: enter");
@@ -1877,7 +1905,7 @@ static unsigned copy_attribute_value(
   attribute_info_t* attribute_info,
   CK_VOID_PTR value, unsigned remaining_size) {
 
-  ErlNifBinary binary;
+  ErlNifBinary binary = {0};
   int bool_value = 0;
   unsigned value_size = 0;
   CK_ULONG ulong_value = 0;
@@ -2132,7 +2160,7 @@ static ERL_NIF_TERM encrypt_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
   CK_RV rv = CKR_GENERAL_ERROR;
   p11_module_t* p11_module = NULL;
   CK_SESSION_HANDLE session_handle = 0;
-  CK_MECHANISM mechanism;
+  CK_MECHANISM mechanism = {0};
   CK_OBJECT_HANDLE key_handle = 0;
   ERL_NIF_TERM mech_conversion_result;
 
@@ -2183,7 +2211,7 @@ static ERL_NIF_TERM encrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[] 
   CK_RV rv = CKR_GENERAL_ERROR;
   p11_module_t* p11_module = NULL;
   CK_SESSION_HANDLE session_handle = 0;
-  ErlNifBinary data_in, data_out; 
+  ErlNifBinary data_in = {0}, data_out = {0}; 
   ERL_NIF_TERM data_out_term;
   CK_ULONG res_len1 = 0;
   CK_ULONG res_len2 = 0;
@@ -2246,11 +2274,12 @@ static ERL_NIF_TERM encrypt_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
   CK_RV rv = CKR_GENERAL_ERROR;
   p11_module_t* p11_module = NULL;
   CK_SESSION_HANDLE session_handle = 0;
-  ErlNifBinary data_in, data_out; 
+  ErlNifBinary data_in = {0}, data_out = {0}; 
   ERL_NIF_TERM data_out_term;
   CK_ULONG expected_res_len = 0;
   CK_ULONG actual_res_len = 0;
 
+  P11_debug("encrypt_update: enter");
   REQUIRE_ARGS(env, argc, 3);
 
   /* argv[0]: p11_module */
@@ -2313,11 +2342,12 @@ static ERL_NIF_TERM encrypt_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
   CK_RV rv = CKR_GENERAL_ERROR;
   p11_module_t* p11_module = NULL;
   CK_SESSION_HANDLE session_handle = 0;
-  ErlNifBinary data_out;
+  ErlNifBinary data_out = {0};
   ERL_NIF_TERM data_out_term;
   CK_ULONG expected_res_len = 0;
   CK_ULONG actual_res_len = 0;
 
+  P11_debug("encrypt_final: enter");
   REQUIRE_ARGS(env, argc, 2);
 
   /* argv[0]: p11_module */
@@ -2364,7 +2394,7 @@ static ERL_NIF_TERM decrypt_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
   CK_RV rv = CKR_GENERAL_ERROR;
   p11_module_t* p11_module = NULL;
   CK_SESSION_HANDLE session_handle = 0;
-  CK_MECHANISM mechanism;
+  CK_MECHANISM mechanism = {0};
   CK_OBJECT_HANDLE key_handle = 0;
   ERL_NIF_TERM mech_conversion_result;
 
@@ -2415,7 +2445,7 @@ static ERL_NIF_TERM decrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
   CK_RV rv = CKR_GENERAL_ERROR;
   p11_module_t* p11_module = NULL;
   CK_SESSION_HANDLE session_handle = 0;
-  ErlNifBinary data_in, data_out; 
+  ErlNifBinary data_in = {0}, data_out = {0}; 
   ERL_NIF_TERM data_out_term;
   CK_ULONG res_len1 = 0;
   CK_ULONG res_len2 = 0;
@@ -2478,11 +2508,12 @@ static ERL_NIF_TERM decrypt_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
   CK_RV rv = CKR_GENERAL_ERROR;
   p11_module_t* p11_module = NULL;
   CK_SESSION_HANDLE session_handle = 0;
-  ErlNifBinary data_in, data_out; 
+  ErlNifBinary data_in = {0}, data_out = {0}; 
   ERL_NIF_TERM data_out_term;
   CK_ULONG expected_res_len = 0;
   CK_ULONG actual_res_len = 0;
 
+  P11_debug("decrypt_update: enter");
   REQUIRE_ARGS(env, argc, 3);
 
   /* argv[0]: p11_module */
@@ -2552,11 +2583,12 @@ static ERL_NIF_TERM decrypt_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
   CK_RV rv = CKR_GENERAL_ERROR;
   p11_module_t* p11_module = NULL;
   CK_SESSION_HANDLE session_handle = 0;
-  ErlNifBinary data_out;
+  ErlNifBinary data_out = {0};
   ERL_NIF_TERM data_out_term;
   CK_ULONG expected_res_len = 0;
   CK_ULONG actual_res_len = 0;
 
+  P11_debug("decrypt_final: enter");
   REQUIRE_ARGS(env, argc, 2);
 
   /* argv[0]: p11_module */
@@ -2603,7 +2635,7 @@ static ERL_NIF_TERM generate_random(ErlNifEnv* env, int argc, const ERL_NIF_TERM
   p11_module_t* p11_module = NULL;
   CK_SESSION_HANDLE session_handle = 0;
   CK_ULONG requested_length = 0;
-  ErlNifBinary data_out;
+  ErlNifBinary data_out = {0};
   ERL_NIF_TERM data_out_term;
 
   P11_debug("generate_random: enter");
@@ -2897,6 +2929,7 @@ void resource_cleanup(ErlNifEnv* env, void* obj) {
   CK_RV rv;
   p11_module_t* p11_module = (p11_module_t*)obj;
   
+  P11_debug("resource_cleanup: enter obj=%p", obj);
 #if 0  
   if (p11_module) {
     /* Call C_Finalize if function list exists */
