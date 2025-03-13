@@ -22,6 +22,9 @@ defmodule P11ex.TestHelper do
   def setup_session do
     Logger.info("test/setup_session: Starting")
 
+#    IO.puts("Attach `lldb` to process #{:os.getpid()} and press Enter to continue...")
+#    IO.gets("")
+
     {:ok, slot} = P11ex.Module.find_slot_by_tokenlabel("Token_0")
     assert slot != nil
 
