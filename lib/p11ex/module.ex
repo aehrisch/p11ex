@@ -109,6 +109,14 @@ defmodule P11ex.Module do
     GenServer.call(__MODULE__, {:token_info, slot})
   end
 
+  def list_mechanisms(slot) do
+    GenServer.call(__MODULE__, {:list_mechanisms, slot})
+  end
+
+  def mechanism_info(slot, mechanism_type) do
+    GenServer.call(__MODULE__, {:mechanism_info, slot, mechanism_type})
+  end
+
   def open_session(slot, flags) do
     GenServer.call(__MODULE__, {:open_session, slot, flags})
   end
@@ -183,6 +191,16 @@ defmodule P11ex.Module do
   @impl true
   def handle_call({:token_info, slot}, _from, state) do
     {:reply, Lib.token_info(state.handle, slot.slot_id), state}
+  end
+
+  @impl true
+  def handle_call({:list_mechanisms, slot}, _from, state) do
+    {:reply, Lib.list_mechanisms(state.handle, slot.slot_id), state}
+  end
+
+  @impl true
+  def handle_call({:mechanism_info, slot, mechanism_type}, _from, state) do
+    {:reply, Lib.mechanism_info(state.handle, slot.slot_id, mechanism_type), state}
   end
 
   @impl true

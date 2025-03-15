@@ -210,6 +210,8 @@ static ERL_NIF_TERM decrypt_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
 static ERL_NIF_TERM generate_random(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 
 static ERL_NIF_TERM destroy_object(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM list_mechanisms(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM mechanism_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 
 /* Forward declarations for functions that are internal to this module */
 void resource_cleanup(ErlNifEnv* env, void* obj);
@@ -565,7 +567,9 @@ static ErlNifFunc nif_funcs[] = {
   {"n_decrypt_update", 3, decrypt_update},
   {"n_decrypt_final", 2, decrypt_final},
   {"n_generate_random", 3, generate_random},
-  {"n_destroy_object", 3, destroy_object}
+  {"n_destroy_object", 3, destroy_object},
+  {"n_list_mechanisms", 2, list_mechanisms},
+  {"n_mechanism_info", 3, mechanism_info}
 };
 
 /* Implementation of load_module/1: Load a PKCS#11 module, get the function list, 
@@ -2702,6 +2706,95 @@ static ERL_NIF_TERM destroy_object(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
   return enif_make_atom(env, "ok");
 }
 
+static ERL_NIF_TERM list_mechanisms(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SLOT_ID slot_id = 0;
+  CK_ULONG mechanism_count = 0;
+  CK_MECHANISM_TYPE_PTR mechanism_list = NULL;
+
+  P11_debug("list_mechanisms: enter");
+  REQUIRE_ARGS(env, argc, 2);
+
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[1]: slot id */
+  ULONG_ARG(env, argv[1], slot_id);
+
+  P11_call(rv, p11_module, C_GetMechanismList, slot_id, NULL_PTR, &mechanism_count);
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_GetMechanismList", rv);
+  }
+
+  P11_debug("list_mechanisms: mechanism_count=%lu", mechanism_count);
+
+  mechanism_list = (CK_MECHANISM_TYPE_PTR) calloc(mechanism_count, sizeof(CK_MECHANISM_TYPE));
+  if (mechanism_list == NULL) {
+    return enif_make_tuple2(env, 
+      enif_make_atom(env, "error"), 
+      enif_make_atom(env, "memory_allocation_failed"));
+  }
+
+  P11_call(rv, p11_module, C_GetMechanismList, slot_id, mechanism_list, &mechanism_count);
+  if (rv != CKR_OK) {
+    free(mechanism_list);
+    return P11_error(env, "C_GetMechanismList", rv);
+  }
+
+  ERL_NIF_TERM list = enif_make_list(env, 0);
+  for (CK_ULONG i = 0; i < mechanism_count; i++) {
+    list = enif_make_list_cell(env, ckm_to_atom(env, mechanism_list[i]), list);
+  }
+
+  free(mechanism_list);
+  return enif_make_tuple2(env, enif_make_atom(env, "ok"), list);
+}
+
+static ERL_NIF_TERM mechanism_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SLOT_ID slot_id = 0;
+  CK_MECHANISM_TYPE mechanism_type = 0;
+  CK_MECHANISM_INFO mechanism_info = {0};
+
+  P11_debug("mechanism_info: enter");
+  REQUIRE_ARGS(env, argc, 3);
+
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[1]: slot id */
+  ULONG_ARG(env, argv[1], slot_id);
+
+  /* argv[2]: mechanism type */
+  if (mechanism_type_from_term(env, argv[2], &mechanism_type) < 0) {
+    return enif_make_badarg(env);
+  } 
+
+  P11_debug("mechanism_info: slot_id=%lu, mechanism_type=0x%lx", slot_id, mechanism_type);
+  P11_call(rv, p11_module, C_GetMechanismInfo, slot_id, mechanism_type, &mechanism_info);
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_GetMechanismInfo", rv);
+  }
+
+  P11_debug("mechanism_info: min_key_size=%lu, max_key_size=%lu, flags=%lu", 
+    mechanism_info.ulMinKeySize, mechanism_info.ulMaxKeySize, mechanism_info.flags);
+
+  return enif_make_tuple2(env, 
+          enif_make_atom(env, "ok"), 
+          enif_make_tuple3(env, 
+            enif_make_ulong(env, mechanism_info.ulMinKeySize), 
+            enif_make_ulong(env, mechanism_info.ulMaxKeySize), 
+            enif_make_ulong(env, mechanism_info.flags)));
+}
+
 /* Forward declaration for the new function */
 static const char* ckr_to_string(CK_RV rv);
 
@@ -2828,6 +2921,7 @@ static int mechanism_type_from_term(
     CK_ULONG long_value = 0;
     char atom[MAX_MECHANISM_NAME_LENGTH];
 
+    P11_debug("mechanism_type_from_term: term=%T", term);
     if (enif_is_number(env, term)) {
       if (!enif_get_ulong(env, term, &long_value)) {
         return -1;
@@ -2926,7 +3020,7 @@ static void secure_zero(void* ptr, size_t len) {
 }
 
 void resource_cleanup(ErlNifEnv* env, void* obj) {
-  CK_RV rv;
+
   p11_module_t* p11_module = (p11_module_t*)obj;
   
   P11_debug("resource_cleanup: enter obj=%p", obj);

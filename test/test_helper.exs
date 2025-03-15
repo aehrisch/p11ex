@@ -19,13 +19,27 @@ defmodule P11ex.TestHelper do
       raise "Environment variable PKCS11_MODULE is not set."
   end
 
+  def find_slot do
+    Logger.info("test/find_slot: Starting")
+
+    token_label = Application.fetch_env!(:p11ex, :token_label)
+
+    {:ok, slot} = P11ex.Module.find_slot_by_tokenlabel(token_label)
+    assert slot != nil
+    Logger.info("test/find_slot: Found slot #{slot.slot_id}")
+
+    {:ok, %{
+      slot: slot,
+      token_label: token_label
+    }}
+  end
+
   def setup_session do
     Logger.info("test/setup_session: Starting")
 
-#    IO.puts("Attach `lldb` to process #{:os.getpid()} and press Enter to continue...")
-#    IO.gets("")
+    token_label = Application.fetch_env!(:p11ex, :token_label)
 
-    {:ok, slot} = P11ex.Module.find_slot_by_tokenlabel("Token_0")
+    {:ok, slot} = P11ex.Module.find_slot_by_tokenlabel(token_label)
     assert slot != nil
 
     Logger.info("test/setup_session: Starting Session GenServer for slot #{slot.slot_id}")
@@ -43,7 +57,7 @@ defmodule P11ex.TestHelper do
     {:ok, %{
       slot: slot,
       session_pid: session_pid,
-      token_label: "Token_0"
+      token_label: token_label
     }}
   end
 

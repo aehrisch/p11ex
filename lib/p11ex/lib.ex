@@ -427,6 +427,23 @@ defmodule P11ex.Lib do
     n_destroy_object(session.module.ref, session.handle, object.handle)
   end
 
+  def list_mechanisms(%ModuleHandle{} = module, slot_id)
+      when is_integer(slot_id) and slot_id >= 0 do
+    n_list_mechanisms(module.ref, slot_id)
+  end
+
+  def mechanism_info(%ModuleHandle{} = module, slot_id, mechanism_type)
+      when ((is_integer(mechanism_type) and mechanism_type >= 0) or is_atom(mechanism_type))
+           and is_integer(slot_id) and slot_id >= 0 do
+    with {:ok, {min_length, max_length, flags}} <- n_mechanism_info(module.ref, slot_id, mechanism_type) do
+      {:ok, %{
+        min_length: min_length,
+        max_length: max_length,
+        flags: P11ex.Flags.to_atoms(:mechanism, flags)
+      }}
+    end
+  end
+
   #   _   _      _                   _____                 _   _
   #  | | | | ___| |_ __   ___ _ __  |  ___|   _ _ __   ___| |_(_) ___  _ __  ___
   #  | |_| |/ _ \ | '_ \ / _ \ '__| | |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __|
@@ -509,6 +526,16 @@ defmodule P11ex.Lib do
   defp n_destroy_object(_p11_module, _session, _object) do
     # This function will be implemented in NIF
     raise "NIF destroy_object/3 not implemented"
+  end
+
+  defp n_list_mechanisms(_p11_module, _slot_id) do
+    # This function will be implemented in NIF
+    raise "NIF list_mechanisms/2 not implemented"
+  end
+
+  defp n_mechanism_info(_p11_module, _slot_id, _mechanism_type) do
+    # This function will be implemented in NIF
+    raise "NIF mechanism_info/3 not implemented"
   end
 
   defp n_get_object_attributes(_p11_module, _session, _object, _attributes) do
