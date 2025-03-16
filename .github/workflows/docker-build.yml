@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60  # Increased timeout
     permissions:
       contents: read
       packages: write
@@ -51,6 +51,11 @@ jobs:
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-${{ matrix.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            BUILDPLATFORM=${{ matrix.platform }}
+            TARGETPLATFORM=${{ matrix.platform }}
+          provenance: true
+          outputs: type=registry,compression=zstd
 
       - name: Inspect built images
         if: github.event_name != 'workflow_dispatch'

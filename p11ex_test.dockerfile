@@ -10,9 +10,10 @@ RUN apt-get install -y \
     build-essential \
     autoconf \
     m4 \
-    softhsm2
-#    locale-gen en_US.UTF-8 && \
-#    update-locale LANG=en_US.UTF-8
+    softhsm2 \
+    locales \
+    && locale-gen en_US.UTF-8 \
+    && update-locale LANG=en_US.UTF-8
 
 ENV ASDF_VERSION=v0.14.0 \
     LANG=en_US.UTF-8 \
@@ -43,7 +44,9 @@ RUN apt-get install -y \
     libncurses-dev \
     openjdk-11-jdk \
     opensc \
-    opensc-pkcs11
+    opensc-pkcs11 \
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu
 
 ENV PKCS11SPY=/usr/lib/softhsm/libsofthsm2.so 
 # ENV PKCS11SPY_OUTPUT=/tmp/pkcs11spy.log
