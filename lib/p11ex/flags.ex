@@ -39,6 +39,12 @@ defmodule P11ex.Flags do
 
   @mechanism_flags %{
     hw: 0x00000001,
+    message_encrypt: 0x00000002,
+    message_decrypt: 0x00000004,
+    message_sign: 0x00000008,
+    message_verify: 0x00000010,
+    multi_message: 0x00000020,
+    find_objects: 0x00000040,
     encrypt: 0x00000100,
     decrypt: 0x00000200,
     digest: 0x00000400,
@@ -51,6 +57,13 @@ defmodule P11ex.Flags do
     wrap: 0x00020000,
     unwrap: 0x00040000,
     derive: 0x00080000,
+    ec_f_p: 0x00100000,
+    ec_f_2m: 0x00200000,
+    ec_ecparams: 0x00400000,
+    ec_oid: 0x00800000,
+    ec_named_curve: 0x01000000,
+    ec_compress: 0x02000000,
+    ec_curvename: 0x04000000,
     extension: 0x80000000
   }
 
