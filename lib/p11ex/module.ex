@@ -109,10 +109,44 @@ defmodule P11ex.Module do
     GenServer.call(__MODULE__, {:token_info, slot})
   end
 
+  @doc """
+  List all mechanisms supported by the PKCS#11 module for a given slot. The mechanisms
+  are returned as a list of atoms. If the mechanism is not known to P11ex (e.g. a vendor
+  specific mechanism), it will be returned as an integer.
+  """
+  @spec list_mechanisms(Slot.t()) :: {:ok, list(atom() | non_neg_integer())} | {:error, atom()}
   def list_mechanisms(slot) do
     GenServer.call(__MODULE__, {:list_mechanisms, slot})
   end
 
+  @doc """
+  Get information about a mechanism for a given slot. The mechanism is specified
+  as an atom or an integer. For example, the mechanism `:ckm_aes_cbc` can also
+  be specified as the integer `0x00001082`:
+
+  ```elixir
+  {:ok, info} = P11ex.Module.mechanism_info(slot, :ckm_aes_cbc)
+  {:ok, info} = P11ex.Module.mechanism_info(slot, 0x00001082)
+  ```
+
+  The return value is a map with the following keys:
+
+  * `flags` - The flags of the mechanism (a list of atoms, see `P11ex.Flags`). This
+  indicates for what operations the mechanism can be used, e.g. `:encrypt`,
+  `:decrypt`, `:sign`, `:verify`, etc.
+  * `min_length` - The minimum key length supported by the mechanism (an integer)
+  * `max_length` - The maximum key length supported by the mechanism (an integer)
+
+  For example, for `:ckm_aes_cbc` a typical return value is:
+
+  ```elixir
+  %{flags: MapSet.new([:wrap, :encrypt, :decrypt]), min_length: 16, max_length: 32}
+  ```
+
+  If the mechanism is not known, the return value is
+  `{:error, {:C_GetMechanismInfo, :ckr_mechanism_invalid}}`.
+  """
+  @spec mechanism_info(Slot.t(), atom() | non_neg_integer()) :: {:ok, map()} | {:error, atom()}
   def mechanism_info(slot, mechanism_type) do
     GenServer.call(__MODULE__, {:mechanism_info, slot, mechanism_type})
   end
