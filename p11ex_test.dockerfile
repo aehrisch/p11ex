@@ -15,7 +15,7 @@ RUN apt-get install -y \
     && locale-gen en_US.UTF-8 \
     && update-locale LANG=en_US.UTF-8
 
-ENV ASDF_VERSION=v0.14.0 \
+ENV ASDF_VERSION=v0.16.2 \
     LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8
 
@@ -51,16 +51,18 @@ RUN apt-get install -y \
 ENV PKCS11SPY=/usr/lib/softhsm/libsofthsm2.so 
 # ENV PKCS11SPY_OUTPUT=/tmp/pkcs11spy.log
 
-# Install Erlang and Elixir
+# Install Erlang
 RUN asdf plugin add erlang && \
-    asdf plugin add elixir && \
     asdf install erlang 27.2 && \
-    asdf install elixir 1.17.3 && \
     asdf global erlang 27.2 && \
-    asdf global elixir 1.17.3 && \
     erl -version && \
+    echo "erlang 27.2" >> $HOME/.tool-versions
+
+# Install Elixir
+RUN asdf plugin add elixir && \
+    asdf install elixir 1.17.3 && \
+    asdf global elixir 1.17.3 && \
     elixir -v && \
-    echo "erlang 27.2" >> $HOME/.tool-versions && \
     echo "elixir 1.17.3" >> $HOME/.tool-versions
 
 WORKDIR /app 
