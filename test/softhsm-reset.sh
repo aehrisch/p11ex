@@ -7,14 +7,22 @@ export PKCS11_TOKEN_LABEL=${PKCS11_TOKEN_LABEL:-Token_0}
 export PKCS11_TOKEN_PIN=${PKCS11_TOKEN_PIN:-1234}
 export PKCS11_TOKEN_SO_PIN=${PKCS11_TOKEN_SO_PIN:-12345678}
 
-export TOKEN_DIR=${TOKEN_DIR:-$(mktemp -d)}
-export SOFTHSM2_CONF=${SOFTHSM2_CONF:-$(mktemp)}
+if [ -n "${MAKE_TOKEN_DIR}" ]; then
 
-cat > ${SOFTHSM2_CONF} <<EOF
+  export TOKEN_DIR=${TOKEN_DIR:-$(mktemp -d)}
+  export SOFTHSM2_CONF=${SOFTHSM2_CONF:-$(mktemp)}
+
+  echo "### Creating SoftHSM token data in ${TOKEN_DIR}"
+
+  cat > ${SOFTHSM2_CONF} <<EOF
 directories.tokendir = ${TOKEN_DIR}
 objectstore.backend = file
 EOF
-echo "### Creating SoftHSM token data in ${TOKEN_DIR}"
+
+  echo "### env"
+  echo "env PKCS11_MODULE=${PKCS11_MODULE} SOFTHSM2_CONF=${SOFTHSM2_CONF}"
+
+fi
 
 export SOFTHSM_PREFIX=${SOFTHSM_PREFIX:-/usr}
 export P11TOOL_PREFIX=${P11TOOL_PREFIX:-/usr}
@@ -26,7 +34,6 @@ ${SOFTHSM_PREFIX}/bin/softhsm2-util --init-token --slot 0 \
   --so-pin "$PKCS11_TOKEN_SO_PIN"
 
 ${SOFTHSM_PREFIX}/bin/softhsm2-util --show-slots
-
 
 ${P11TOOL_PREFIX}/bin/pkcs11-tool --module ${PKCS11_MODULE} --list-mechanisms
 
@@ -52,8 +59,5 @@ ${P11TOOL_PREFIX}/bin/pkcs11-tool --module ${PKCS11_MODULE} --token ${PKCS11_TOK
   --list-objects
 
 echo "### Done"
-
-echo "### env"
-echo "env PKCS11_MODULE=${PKCS11_MODULE} SOFTHSM2_CONF=${SOFTHSM2_CONF}"
 
 exit 0
