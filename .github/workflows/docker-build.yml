@@ -40,3 +40,11 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}/p11ex-test:latest
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}
+
+      - name: Inspect built images
+        if: ${{ !env.ACT }}
+        run: |
+          echo "Inspecting latest image:"
+          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:latest | jq .
+          echo -e "\nInspecting SHA-tagged image:"
+          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} | jq .
