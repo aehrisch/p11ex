@@ -43,8 +43,8 @@ jobs:
           push: ${{ github.event_name != 'workflow_dispatch' }}
           platforms: ${{ matrix.platform }}
           tags: |
-            ghcr.io/${{ github.repository }}/p11ex-test:latest-${{ matrix.platform }}
-            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-${{ matrix.platform }}
+            ghcr.io/${{ github.repository }}/p11ex-test:latest_${{ matrix.platform }}
+            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}_${{ matrix.platform }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -52,9 +52,9 @@ jobs:
         if: github.event_name != 'workflow_dispatch'
         run: |
           echo "Inspecting latest image for ${{ matrix.platform }}:"
-          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:latest-${{ matrix.platform }} | jq .
+          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:latest_${{ matrix.platform }} | jq .
           echo -e "\nInspecting SHA-tagged image for ${{ matrix.platform }}:"
-          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-${{ matrix.platform }} | jq .
+          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}_${{ matrix.platform }} | jq .
 
   manifest:
     needs: build
@@ -75,12 +75,12 @@ jobs:
         run: |
           docker manifest create \
             ghcr.io/${{ github.repository }}/p11ex-test:latest \
-            ghcr.io/${{ github.repository }}/p11ex-test:latest-linux/amd64 \
-            ghcr.io/${{ github.repository }}/p11ex-test:latest-linux/arm64
+            ghcr.io/${{ github.repository }}/p11ex-test:latest_linux/amd64 \
+            ghcr.io/${{ github.repository }}/p11ex-test:latest_linux/arm64
           docker manifest push ghcr.io/${{ github.repository }}/p11ex-test:latest
           
           docker manifest create \
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} \
-            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux/amd64 \
-            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux/arm64
+            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}_linux/amd64 \
+            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}_linux/arm64
           docker manifest push ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}
