@@ -40,7 +40,7 @@ jobs:
         with:
           context: .
           file: p11ex_test.dockerfile
-          push: github.event_name != 'workflow_dispatch'
+          push: ${{ github.event_name != 'workflow_dispatch' }}
           platforms: ${{ matrix.platform }}
           tags: |
             ghcr.io/${{ github.repository }}/p11ex-test:latest-${{ matrix.platform }}
