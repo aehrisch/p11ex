@@ -21,7 +21,7 @@ jobs:
             runner: ubuntu-latest
           - platform: linux/arm64
             tag: linux-arm64
-            runner: ubuntu-latest-arm64
+            runner: [self-hosted, Linux, ARM64]
       fail-fast: false
 
     steps:
