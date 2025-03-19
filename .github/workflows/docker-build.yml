@@ -5,10 +5,11 @@ on:
     branches: [ main ]
   schedule:
     - cron: '23 04 * * *'  # Run at 00:00 UTC every day
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 120
     permissions:
       contents: read
@@ -18,10 +19,10 @@ jobs:
         include:
           - platform: linux/amd64
             tag: linux-amd64
-            runner: ubuntu-latest
+            runs-on: ubuntu-latest
           - platform: linux/arm64
             tag: linux-arm64
-            runner: [self-hosted, Linux, ARM64]
+            runs-on: [self-hosted, Linux, ARM64]
       fail-fast: false
 
     steps:
@@ -29,6 +30,9 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+          driver-opts: image=moby/buildkit:latest
 
       - name: Log in to GitHub Container Registry
         if: github.event_name != 'workflow_dispatch'
@@ -52,14 +56,7 @@ jobs:
           build-args: |
             BUILDPLATFORM=${{ matrix.platform }}
             TARGETPLATFORM=${{ matrix.platform }}
-          provenance: true
-          outputs: type=registry,compression=zstd
-
-      - name: Inspect built images
-        if: github.event_name != 'workflow_dispatch'
-        run: |
-          echo "Inspecting SHA-tagged image for ${{ matrix.platform }}:"
-          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-${{ matrix.tag }} | jq .
+          outputs: compression=zstd
 
   manifest:
     needs: build
@@ -76,19 +73,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull amd64 image
-        run: |
-          docker pull ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64
-
-      - name: Pull arm64 image
-        run: |
-          docker pull ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
-
-      - name: Collect image information
-        run: |
-          docker image inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64 || true
-          docker image inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64 || true
-
       - name: Create manifest for the SHA-tagged image
         run: |
           docker manifest create ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} \
@@ -98,16 +82,6 @@ jobs:
       - name: Inspect the manifest
         run: |
           docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} || true
-
-      - name: Annotate the manifest with the correct OS and architecture
-        run: |
-          docker manifest annotate ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} \
-            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64 \
-            --os linux --arch amd64
-
-          docker manifest annotate ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} \
-            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64 \
-            --os linux --arch arm64
 
       - name: Push the manifest
         run: |
