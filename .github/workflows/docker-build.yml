@@ -49,7 +49,6 @@ jobs:
           file: p11ex_test.dockerfile
           push: ${{ github.event_name != 'workflow_dispatch' }}
           platforms: ${{ matrix.platform }}
-          outputs: type=registry,compression=gzip
           tags: |
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-${{ matrix.tag }}
           cache-from: type=gha
@@ -61,7 +60,7 @@ jobs:
       - name: Debug - Inspect pushed image
         if: github.event_name != 'workflow_dispatch'
         run: |
-          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-${{ matrix.tag }} || true
+          docker buildx imagetools inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-${{ matrix.tag }} || true
 
   manifest:
     needs: build
