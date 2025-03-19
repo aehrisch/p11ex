@@ -76,32 +76,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create and push manifest
+      - name: Collect image information
         run: |
-          # Create manifest for the SHA-tagged image
-
-          echo "### Step 0: Collect information...""
           docker image inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64 || true
-          docker image inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64 || true 
+          docker image inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64 || true
 
-          echo "### Step 1: Create manifest for the SHA-tagged image"
+      - name: Create manifest for the SHA-tagged image
+        run: |
           docker manifest create ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} \
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64 \
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
 
+      - name: Inspect the manifest
+        run: |
           docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} || true
 
-          echo "### Step 2a: Annotate the manifest with the correct OS and architecture"
+      - name: Annotate the manifest with the correct OS and architecture
+        run: |
           docker manifest annotate ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} \
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64 \
             --os linux --arch amd64
 
-          echo "### Step 2b: Annotate the manifest with the correct OS and architecture"
           docker manifest annotate ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} \
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64 \
             --os linux --arch arm64
 
-          echo "### Step 3: Push the manifest"
+      - name: Push the manifest
+        run: |
           docker manifest push ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}
-
-          echo "### Done"
