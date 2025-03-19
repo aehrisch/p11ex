@@ -56,7 +56,6 @@ jobs:
           build-args: |
             BUILDPLATFORM=${{ matrix.platform }}
             TARGETPLATFORM=${{ matrix.platform }}
-          outputs: compression=zstd
 
   manifest:
     needs: build
