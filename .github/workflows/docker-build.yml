@@ -49,7 +49,7 @@ jobs:
           file: p11ex_test.dockerfile
           push: ${{ github.event_name != 'workflow_dispatch' }}
           platforms: ${{ matrix.platform }}
-          outputs: type=registry,compression=gzip,oci-mediatypes=true
+          outputs: type=registry,compression=gzip
           tags: |
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-${{ matrix.tag }}
           cache-from: type=gha
@@ -57,6 +57,11 @@ jobs:
           build-args: |
             BUILDPLATFORM=${{ matrix.platform }}
             TARGETPLATFORM=${{ matrix.platform }}
+
+      - name: Debug - Inspect pushed image
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-${{ matrix.tag }} || true
 
   manifest:
     needs: build
@@ -72,15 +77,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Debug - Inspect individual images
+        run: |
+          echo "Inspecting linux-amd64 image:"
+          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64 || true
+          echo "Inspecting linux-arm64 image:"
+          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64 || true
+
       - name: Create manifest for the SHA-tagged image
         run: |
-          docker manifest create ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} \
+          # First try to pull the images to ensure they exist
+          docker pull --platform linux/amd64 ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64
+          docker pull --platform linux/arm64 ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
+          
+          # Remove any existing manifest to avoid conflicts
+          docker manifest rm ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} || true
+          
+          # Create new manifest
+          docker manifest create \
+            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} \
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64 \
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
 
       - name: Inspect the manifest
         run: |
-          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} || true
+          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}
 
       - name: Push the manifest
         run: |
