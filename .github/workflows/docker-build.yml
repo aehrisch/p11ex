@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.runs-on }}
-    timeout-minutes: 120
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -49,6 +49,7 @@ jobs:
           file: p11ex_test.dockerfile
           push: ${{ github.event_name != 'workflow_dispatch' }}
           platforms: ${{ matrix.platform }}
+          outputs: type=registry,compression=gzip
           tags: |
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-${{ matrix.tag }}
           cache-from: type=gha
@@ -60,7 +61,6 @@ jobs:
   manifest:
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch'
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
