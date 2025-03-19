@@ -76,6 +76,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Pull amd64 image
+        run: |
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64
+
+      - name: Pull arm64 image
+        run: |
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
+
       - name: Collect image information
         run: |
           docker image inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64 || true
