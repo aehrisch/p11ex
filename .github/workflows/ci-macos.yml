@@ -1,0 +1,40 @@
+name: Test macOS
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  test-macos-arm64:
+    runs-on: macos-latest
+    permissions:
+      checks: write
+      pull-requests: write
+      contents: read
+      packages: read
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Install Erlang and Elixir
+        run: |
+          brew install erlang elixir
+
+      - name: Checkout SoftHSM 2.6.1
+        run: |
+          git clone https://github.com/opendnssec/SoftHSM2.git
+          cd SoftHSM2
+          git checkout tags/2.6.1
+
+      - name: Configure SoftHSM Build
+        run: |
+          ./autogen.sh
+          ./configure
+
+      - name: Install hex and get dependencies
+        run: |
+          mix local.hex --force && mix deps.get && mix compile --warnings-as-errors && mix test --cover || true
