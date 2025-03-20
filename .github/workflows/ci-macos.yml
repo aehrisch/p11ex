@@ -31,14 +31,13 @@ jobs:
         run: |
           brew install erlang elixir
 
-      - name: Checkout SoftHSM 2.6.1
+      - name: Checkout SoftHSMv2 at tag 2.6.1 (shallow clone)
         run: |
-          git clone https://github.com/opendnssec/SoftHSM2.git --depth 1
-          cd SoftHSM2
-          git checkout tags/2.6.1
+          git clone --branch 2.6.1 --depth 1 https://github.com/softhsm/SoftHSMv2.git
 
       - name: Configure SoftHSM Build
         run: |
+          cd SoftHSMv2
           ./autogen.sh
           ./configure
 
