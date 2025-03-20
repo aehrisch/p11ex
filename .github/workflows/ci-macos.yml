@@ -33,7 +33,7 @@ jobs:
 
       - name: Checkout SoftHSM 2.6.1
         run: |
-          git clone git@github.com:opendnssec/SoftHSM2.git
+          git clone https://github.com/opendnssec/SoftHSM2.git --depth 1
           cd SoftHSM2
           git checkout tags/2.6.1
 
