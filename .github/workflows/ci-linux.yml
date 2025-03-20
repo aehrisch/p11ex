@@ -17,6 +17,9 @@ jobs:
       packages: read
     
     steps:
+      - name: Cleanup workspace
+        run: |
+          sudo rm -rf ${{ github.workspace }}/*
 
       - uses: actions/checkout@v4
 
@@ -70,6 +73,9 @@ jobs:
       packages: read
     
     steps:
+      - name: Cleanup workspace
+        run: |
+          sudo rm -rf ${{ github.workspace }}/*
 
       - uses: actions/checkout@v4
 
