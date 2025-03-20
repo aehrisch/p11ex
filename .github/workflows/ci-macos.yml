@@ -1,0 +1,99 @@
+name: Test macOS
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  test-macos-arm64:
+    runs-on: macos-latest
+    permissions:
+      checks: write
+      pull-requests: write
+      contents: read
+      packages: read
+
+    steps:
+      - name: Cleanup workspace
+        run: |
+          sudo rm -rf ${{ github.workspace }}/*
+
+      - uses: actions/checkout@v4
+
+      - name: Run uname -a
+        run: |
+          uname -a
+
+      - name: Install Erlang and Elixir
+        run: |
+          brew install erlang elixir
+
+      - name: Install build tools
+        run: |
+          brew install autoconf automake
+
+      - name: Install PKCS11 tools
+        run: |
+          brew install pkcs11-tools opensc
+
+      - name: Checkout SoftHSMv2 at tag 2.6.1 (shallow clone)
+        run: |
+          git clone --branch 2.6.1 --depth 1 https://github.com/softhsm/SoftHSMv2.git
+
+      - name: Configure SoftHSM Build
+        run: |
+          mkdir ${{ github.workspace }}/softhsm
+          cd SoftHSMv2
+          ./autogen.sh
+          ./configure --prefix=${{ github.workspace }}/softhsm --enable-ecc --enable-eddsa --with-openssl=/opt/homebrew/opt/openssl@3 --disable-gost
+
+      - name: Build and install SoftHSM
+        run: |
+          cd ${{ github.workspace }}/SoftHSMv2
+          make
+          make install
+
+      - name: Download pkcs11 headers
+        run: |
+          cd c_src
+          curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h 
+          curl -z pkcs11t.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h
+          curl -z pkcs11f.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h 
+
+      - name: Install hex and get dependencies
+        run: |
+          mix local.hex --force && mix deps.get
+
+      - name: Mix compile
+        run: |
+          mix compile
+          
+      - name: Initialize SoftHSM token
+        run: |
+          mkdir -p ${{ github.workspace }}/token
+          env SOFTHSM_PREFIX=${{ github.workspace }}/softhsm \
+              PKCS11_MODULE=${{ github.workspace }}/softhsm/lib/softhsm/libsofthsm2.so \
+              P11TOOL_PREFIX=/opt/homebrew \
+              MAKE_TOKEN_DIR=yes \
+            bash -x test/softhsm-reset.sh
+
+      - name: Mix test
+        run: |
+          env MIX_ENV=test \
+              PKCS11_MODULE=${{ github.workspace }}/softhsm/lib/softhsm/libsofthsm2.so \
+              SOFTHSM2_CONF=`cat ${{ github.workspace }}/sofhsm-conf.path` \
+            mix test --cover --trace
+
+      - name: Upload test results and coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-macos-arm64.zip
+          path: |
+            _build/test/lib/*/test-*.xml
+            cover/
+            cover/excoveralls.json
+            doc/
+
