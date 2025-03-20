@@ -5,10 +5,13 @@ on:
     branches: [ main ]
   schedule:
     - cron: '23 04 * * *'  # Run at 00:00 UTC every day
+  workflow_dispatch:
 
 jobs:
-  build:
+
+  build-linux-amd64:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
@@ -17,7 +20,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Log in to GitHub Container Registry
-        if: ${{ !env.ACT }}
+        if: github.event_name != 'workflow_dispatch'
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
@@ -29,8 +32,96 @@ jobs:
         with:
           context: .
           file: p11ex_test.dockerfile
-          push: ${{ !env.ACT }}
-#          load: ${{ env.ACT }}
+          push: ${{ github.event_name != 'workflow_dispatch' }}
+          platforms: linux/amd64
           tags: |
-            ghcr.io/${{ github.repository }}/p11ex-test:latest
-            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64
+          build-args: |
+            BUILDPLATFORM=linux/amd64
+            TARGETPLATFORM=linux/amd64
+
+  build-linux-arm64:
+    runs-on: [self-hosted, Linux, ARM64]
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'workflow_dispatch'
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: p11ex_test.dockerfile
+          push: ${{ github.event_name != 'workflow_dispatch' }}
+          platforms: linux/arm64
+          tags: |
+            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
+          build-args: |
+            BUILDPLATFORM=linux/arm64
+            TARGETPLATFORM=linux/arm64
+
+  manifest:
+    needs: [build-linux-amd64, build-linux-arm64]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'workflow_dispatch'
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull linux-amd64
+        run: |
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64
+
+      - name: Pull linux-arm64
+        run: |
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
+
+      - name: Create manifest for ${github.sha}
+        run: |
+          docker manifest create ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} \
+            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64 \
+            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
+
+      - name: Create manifest for latest
+        run: |
+          docker manifest create ghcr.io/${{ github.repository }}/p11ex-test:latest \
+            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64 \
+            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
+
+      - name: Push manifest ${github.sha}
+        run: |
+          docker manifest push ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}
+
+      - name: Push manifest latest
+        run: |
+          docker manifest push ghcr.io/${{ github.repository }}/p11ex-test:latest
+
+      - name: Debug - Inspect manifest for ${github.sha}
+        run: |
+          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}
+
+      - name: Debug - Inspect manifest for latest
+        run: |
+          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:latest

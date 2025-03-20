@@ -10,11 +10,12 @@ RUN apt-get install -y \
     build-essential \
     autoconf \
     m4 \
-    softhsm2
-#    locale-gen en_US.UTF-8 && \
-#    update-locale LANG=en_US.UTF-8
+    softhsm2 \
+    locales \
+    && locale-gen en_US.UTF-8 \
+    && update-locale LANG=en_US.UTF-8
 
-ENV ASDF_VERSION=v0.14.0 \
+ENV ASDF_VERSION=v0.16.2 \
     LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8
 
@@ -43,21 +44,25 @@ RUN apt-get install -y \
     libncurses-dev \
     openjdk-11-jdk \
     opensc \
-    opensc-pkcs11
+    opensc-pkcs11 \
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu
 
 ENV PKCS11SPY=/usr/lib/softhsm/libsofthsm2.so 
 # ENV PKCS11SPY_OUTPUT=/tmp/pkcs11spy.log
 
-# Install Erlang and Elixir
+# Install Erlang
 RUN asdf plugin add erlang && \
-    asdf plugin add elixir && \
     asdf install erlang 27.2 && \
-    asdf install elixir 1.17.3 && \
     asdf global erlang 27.2 && \
-    asdf global elixir 1.17.3 && \
     erl -version && \
+    echo "erlang 27.2" >> $HOME/.tool-versions
+
+# Install Elixir
+RUN asdf plugin add elixir && \
+    asdf install elixir 1.17.3 && \
+    asdf global elixir 1.17.3 && \
     elixir -v && \
-    echo "erlang 27.2" >> $HOME/.tool-versions && \
     echo "elixir 1.17.3" >> $HOME/.tool-versions
 
 WORKDIR /app 
