@@ -35,6 +35,10 @@ jobs:
         run: |
           brew install autoconf automake libtool
 
+      - name: Install OpenSSL
+        run: |
+          brew install openssl@3
+
       - name: Checkout SoftHSMv2 at tag 2.6.1 (shallow clone)
         run: |
           git clone --branch 2.6.1 --depth 1 https://github.com/softhsm/SoftHSMv2.git
@@ -43,7 +47,11 @@ jobs:
         run: |
           cd SoftHSMv2
           ./autogen.sh
-          ./configure
+          ./configure --enable-ecc --enable-eddsa --with-openssl=/opt/homebrew/opt/openssl@3 --disable-gost
+
+      - name: Build SoftHSM
+        run: |
+          make install
 
       - name: Install hex and get dependencies
         run: |
