@@ -37,7 +37,7 @@ jobs:
 
       - name: Install OpenSSL
         run: |
-          brew install openssl@3
+          brew install openssl@3 pkcs11-tools opensc
 
       - name: Checkout SoftHSMv2 at tag 2.6.1 (shallow clone)
         run: |
@@ -56,6 +56,44 @@ jobs:
           make
           make install
 
+      - name: Download pkcs11 headers
+        run: |
+          cd c_src
+          curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h && \
+          curl -z pkcs11t.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h && \
+          curl -z pkcs11f.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h && \
+
       - name: Install hex and get dependencies
         run: |
-          mix local.hex --force && mix deps.get && mix compile --warnings-as-errors && mix test --cover || true
+          mix local.hex --force && mix deps.get
+
+      - name: Mix compile
+        run: |
+          mix compile --warnings-as-errors
+          
+      - name: Initialize SoftHSM token
+        run: |
+          mkdir -p ${{ github.workspace }}/token
+          env SOFTHSM_PREFIX=${{ github.workspace }}/softhsm \
+              PKCS11_MODULE=${{ github.workspace }}/softhsm/lib/softhsm/libsofthsm2.so \
+              P11TOOL_PREFIX=/opt/homebrew \
+              bash -x test/softhsm-reset.sh
+
+      - name: Mix test
+        run: |
+          env MIX_ENV=test mix test --cover 
+
+      - name: Upload test results and coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-macos-arm64.zip
+          path: |
+            _build/test/lib/*/test-*.xml
+            cover/
+            cover/excoveralls.json
+            doc/
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: "_build/test/lib/*/test-*.xml"
