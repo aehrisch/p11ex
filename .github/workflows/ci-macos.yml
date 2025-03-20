@@ -45,13 +45,18 @@ jobs:
 
       - name: Configure SoftHSM Build
         run: |
+          mkdir ${{ github.workspace }}/softhsm
           cd SoftHSMv2
           ./autogen.sh
-          ./configure --enable-ecc --enable-eddsa --with-openssl=/opt/homebrew/opt/openssl@3 --disable-gost
+          ./configure --prefix=${{ github.workspace }}/softhsm --enable-ecc --enable-eddsa --with-openssl=/opt/homebrew/opt/openssl@3 --disable-gost
 
       - name: Build SoftHSM
         run: |
           make
+
+      - name: Install SoftHSM
+        run: |
+          make install
 
       - name: Install hex and get dependencies
         run: |
