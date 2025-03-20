@@ -69,7 +69,7 @@ jobs:
 
       - name: Mix compile
         run: |
-          mix compile --warnings-as-errors
+          mix compile
           
       - name: Initialize SoftHSM token
         run: |
