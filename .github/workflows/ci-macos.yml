@@ -20,6 +20,10 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      - name: Run uname -a
+        run: |
+          uname -a
+
       - name: Install Erlang and Elixir
         run: |
           brew install erlang elixir
