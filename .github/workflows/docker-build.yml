@@ -90,21 +90,38 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull linux-amd64 and linux-arm64 images
+      - name: Pull linux-amd64
         run: |
           docker pull ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64
+
+      - name: Pull linux-arm64
+        run: |
           docker pull ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
 
-      - name: Create manifest
+      - name: Create manifest for ${github.sha}
         run: |
           docker manifest create ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} \
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64 \
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
 
-      - name: Push manifest
+      - name: Create manifest for latest
+        run: |
+          docker manifest create ghcr.io/${{ github.repository }}/p11ex-test:latest \
+            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64 \
+            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
+
+      - name: Push manifest ${github.sha}
         run: |
           docker manifest push ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}
 
-      - name: Debug - Inspect manifest
+      - name: Push manifest latest
+        run: |
+          docker manifest push ghcr.io/${{ github.repository }}/p11ex-test:latest
+
+      - name: Debug - Inspect manifest for ${github.sha}
         run: |
           docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}
+
+      - name: Debug - Inspect manifest for latest
+        run: |
+          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:latest
