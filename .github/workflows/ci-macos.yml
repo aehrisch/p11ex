@@ -51,7 +51,7 @@ jobs:
 
       - name: Build SoftHSM
         run: |
-          make install
+          make
 
       - name: Install hex and get dependencies
         run: |
