@@ -97,7 +97,3 @@ jobs:
             cover/excoveralls.json
             doc/
 
-      - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          files: "_build/test/lib/*/test-*.xml"
