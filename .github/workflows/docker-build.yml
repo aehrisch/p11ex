@@ -36,8 +36,6 @@ jobs:
           platforms: linux/amd64
           tags: |
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           build-args: |
             BUILDPLATFORM=linux/amd64
             TARGETPLATFORM=linux/amd64
@@ -69,8 +67,6 @@ jobs:
           platforms: linux/arm64
           tags: |
             ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           build-args: |
             BUILDPLATFORM=linux/arm64
             TARGETPLATFORM=linux/arm64
