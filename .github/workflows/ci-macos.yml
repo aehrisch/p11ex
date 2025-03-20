@@ -77,11 +77,15 @@ jobs:
           env SOFTHSM_PREFIX=${{ github.workspace }}/softhsm \
               PKCS11_MODULE=${{ github.workspace }}/softhsm/lib/softhsm/libsofthsm2.so \
               P11TOOL_PREFIX=/opt/homebrew \
-              bash -x test/softhsm-reset.sh
+              MAKE_TOKEN_DIR=yes \
+            bash -x test/softhsm-reset.sh
 
       - name: Mix test
         run: |
-          env MIX_ENV=test mix test --cover 
+          env MIX_ENV=test \
+              PKCS11_MODULE=${{ github.workspace }}/softhsm/lib/softhsm/libsofthsm2.so \
+              SOFTHSM2_CONF=`${{ github.workspace }}/token/sofhsm-conf-path` \
+            mix test --cover --trace
 
       - name: Upload test results and coverage
         uses: actions/upload-artifact@v4

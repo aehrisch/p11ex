@@ -21,7 +21,7 @@ EOF
 
   echo "### env"
   echo "env PKCS11_MODULE=${PKCS11_MODULE} SOFTHSM2_CONF=${SOFTHSM2_CONF}"
-
+  echo "${SOFTHSM2_CONF}" > sofhsm-conf-path
 fi
 
 export SOFTHSM_PREFIX=${SOFTHSM_PREFIX:-/usr}
