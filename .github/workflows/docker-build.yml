@@ -70,3 +70,37 @@ jobs:
           build-args: |
             BUILDPLATFORM=linux/arm64
             TARGETPLATFORM=linux/arm64
+
+  manifest:
+    needs: [build-linux-amd64, build-linux-arm64]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'workflow_dispatch'
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull linux-amd64 and linux-arm64 images
+        run: |
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
+
+      - name: Create manifest
+        run: |
+          docker manifest create ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }} \
+            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-amd64 \
+            ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}-linux-arm64
+
+      - name: Push manifest
+        run: |
+          docker manifest push ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}
