@@ -104,3 +104,7 @@ jobs:
       - name: Push manifest
         run: |
           docker manifest push ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}
+
+      - name: Debug - Inspect manifest
+        run: |
+          docker manifest inspect ghcr.io/${{ github.repository }}/p11ex-test:${{ github.sha }}
