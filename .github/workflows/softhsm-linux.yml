@@ -49,7 +49,7 @@ jobs:
               mix compile --warnings-as-errors && \
               mix test --cover || true"
 
-      - name: Upload test results and coverage
+      - name: Upload test results and coverage (linux-amd64)
         uses: actions/upload-artifact@v4
         with:
           name: test-results-linux-amd64.zip
@@ -59,7 +59,7 @@ jobs:
             cover/excoveralls.json
             doc/
 
-      - name: Publish Test Results
+      - name: Publish Test Results (linux-amd64)
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           files: "_build/test/lib/*/test-*.xml"
@@ -105,7 +105,7 @@ jobs:
               mix compile --warnings-as-errors && \
               mix test --cover || true"
 
-      - name: Upload test results and coverage
+      - name: Upload test results and coverage (linux-arm64)
         uses: actions/upload-artifact@v4
         with:
           name: test-results-linux-arm64.zip
@@ -115,7 +115,7 @@ jobs:
             cover/excoveralls.json
             doc/
 
-      - name: Publish Test Results
+      - name: Publish Test Results (linux-arm64)
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           files: "_build/test/lib/*/test-*.xml"
