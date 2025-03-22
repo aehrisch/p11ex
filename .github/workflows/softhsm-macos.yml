@@ -1,4 +1,4 @@
-name: Test macOS
+name: SoftHSM macOS
 
 on:
   push:
