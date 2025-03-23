@@ -49,6 +49,15 @@ jobs:
               mix compile --warnings-as-errors && \
               mix test --cover || true"
 
+      - name: Cleanup temporary files
+        if: always()
+        run: |
+          sudo rm -f sofhsm-conf.path
+          sudo rm -rf token/
+          sudo rm -rf _build/
+          sudo rm -rf deps/
+          sudo rm -rf cover/
+
       - name: Upload test results and coverage (linux-amd64)
         uses: actions/upload-artifact@v4
         with:
@@ -104,6 +113,15 @@ jobs:
               mix deps.get && \
               mix compile --warnings-as-errors && \
               mix test --cover || true"
+
+      - name: Cleanup temporary files
+        if: always()
+        run: |
+          sudo rm -f sofhsm-conf.path
+          sudo rm -rf token/
+          sudo rm -rf _build/
+          sudo rm -rf deps/
+          sudo rm -rf cover/
 
       - name: Upload test results and coverage (linux-arm64)
         uses: actions/upload-artifact@v4
