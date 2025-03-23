@@ -49,15 +49,6 @@ jobs:
               mix compile --warnings-as-errors && \
               mix test --cover || true"
 
-      - name: Cleanup temporary files
-        if: always()
-        run: |
-          sudo rm -f sofhsm-conf.path
-          sudo rm -rf token/
-          sudo rm -rf _build/
-          sudo rm -rf deps/
-          sudo rm -rf cover/
-
       - name: Upload test results and coverage (linux-amd64)
         uses: actions/upload-artifact@v4
         with:
@@ -114,14 +105,10 @@ jobs:
               mix compile --warnings-as-errors && \
               mix test --cover || true"
 
-      - name: Cleanup temporary files
-        if: always()
+      - name: Print workspace
         run: |
-          sudo rm -f sofhsm-conf.path
-          sudo rm -rf token/
-          sudo rm -rf _build/
-          sudo rm -rf deps/
-          sudo rm -rf cover/
+          echo "### Workspace ${{ github.workspace }}"
+          find ${{ github.workspace }}
 
       - name: Upload test results and coverage (linux-arm64)
         uses: actions/upload-artifact@v4
@@ -137,3 +124,10 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           files: "_build/test/lib/*/test-*.xml"
+
+      - name: Cleanup temporary files
+        if: always()
+        run: |
+          echo "### Cleaning workspace ${{ github.workspace }}"
+          sudo rm -f ${{ github.workspace }}
+  
