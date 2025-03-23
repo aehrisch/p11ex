@@ -129,5 +129,6 @@ jobs:
         if: always()
         run: |
           echo "### Cleaning workspace ${{ github.workspace }}"
-          sudo rm -rvf ${{ github.workspace }}
-  
+          sudo rm -rvf ${{ github.workspace }}/_build
+          sudo rm -rvf ${{ github.workspace }}/deps
+          sudo rm -rvf ${{ github.workspace }}/priv
