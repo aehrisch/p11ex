@@ -209,6 +209,11 @@ static ERL_NIF_TERM decrypt_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
 
 static ERL_NIF_TERM generate_random(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 
+static ERL_NIF_TERM sign_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM sign_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM sign_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM sign(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+
 static ERL_NIF_TERM destroy_object(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM list_mechanisms(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM mechanism_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
@@ -378,16 +383,10 @@ static const mechanism_map_t mechanism_map[] = {
     {"ckm_sha224_rsa_pkcs", CKM_SHA224_RSA_PKCS},
     {"ckm_sha224_rsa_pkcs_pss", CKM_SHA224_RSA_PKCS_PSS},
     {"ckm_sha512_224", CKM_SHA512_224},
-    {"ckm_sha512_224_hmac", CKM_SHA512_224_HMAC},
-    {"ckm_sha512_224_hmac_general", CKM_SHA512_224_HMAC_GENERAL},
     {"ckm_sha512_224_key_derivation", CKM_SHA512_224_KEY_DERIVATION},
     {"ckm_sha512_256", CKM_SHA512_256},
-    {"ckm_sha512_256_hmac", CKM_SHA512_256_HMAC},
-    {"ckm_sha512_256_hmac_general", CKM_SHA512_256_HMAC_GENERAL},
     {"ckm_sha512_256_key_derivation", CKM_SHA512_256_KEY_DERIVATION},
     {"ckm_sha512_t", CKM_SHA512_T},
-    {"ckm_sha512_t_hmac", CKM_SHA512_T_HMAC},
-    {"ckm_sha512_t_hmac_general", CKM_SHA512_T_HMAC_GENERAL},
     {"ckm_sha512_t_key_derivation", CKM_SHA512_T_KEY_DERIVATION},
     {"ckm_sha3_256_rsa_pkcs", CKM_SHA3_256_RSA_PKCS},
     {"ckm_sha3_384_rsa_pkcs", CKM_SHA3_384_RSA_PKCS},
@@ -441,18 +440,6 @@ static const mechanism_map_t mechanism_map[] = {
     {"ckm_des3_cbc_encrypt_data", CKM_DES3_CBC_ENCRYPT_DATA},
     {"ckm_aes_ecb_encrypt_data", CKM_AES_ECB_ENCRYPT_DATA},
     {"ckm_aes_cbc_encrypt_data", CKM_AES_CBC_ENCRYPT_DATA},
-    {"ckm_gostr3410_key_pair_gen", CKM_GOSTR3410_KEY_PAIR_GEN},
-    {"ckm_gostr3410", CKM_GOSTR3410},
-    {"ckm_gostr3410_with_gostr3411", CKM_GOSTR3410_WITH_GOSTR3411},
-    {"ckm_gostr3410_key_wrap", CKM_GOSTR3410_KEY_WRAP},
-    {"ckm_gostr3410_derive", CKM_GOSTR3410_DERIVE},
-    {"ckm_gostr3411", CKM_GOSTR3411},
-    {"ckm_gostr3411_hmac", CKM_GOSTR3411_HMAC},
-    {"ckm_gost28147_key_gen", CKM_GOST28147_KEY_GEN},
-    {"ckm_gost28147_ecb", CKM_GOST28147_ECB},
-    {"ckm_gost28147", CKM_GOST28147},
-    {"ckm_gost28147_mac", CKM_GOST28147_MAC},
-    {"ckm_gost28147_key_wrap", CKM_GOST28147_KEY_WRAP},
     {"ckm_chacha20_key_gen", CKM_CHACHA20_KEY_GEN},
     {"ckm_chacha20", CKM_CHACHA20},
     {"ckm_poly1305_key_gen", CKM_POLY1305_KEY_GEN},
@@ -472,6 +459,32 @@ static const mechanism_map_t mechanism_map[] = {
     {"ckm_aes_key_wrap_pad", CKM_AES_KEY_WRAP_PAD},
     {"ckm_aes_key_wrap_kwp", CKM_AES_KEY_WRAP_KWP},
     {"ckm_aes_key_wrap_pkcs7", CKM_AES_KEY_WRAP_PKCS7},
+
+    /* SHA based HMAC algorithms */
+    {"ckm_sha1_hmac", CKM_SHA_1_HMAC},
+    {"ckm_sha224_hmac", CKM_SHA224_HMAC},
+    {"ckm_sha256_hmac", CKM_SHA256_HMAC},
+    {"ckm_sha384_hmac", CKM_SHA384_HMAC},
+    {"ckm_sha512_hmac", CKM_SHA512_HMAC},
+    {"ckm_sha3_224_hmac", CKM_SHA3_224_HMAC},
+    {"ckm_sha3_256_hmac", CKM_SHA3_256_HMAC},
+    {"ckm_sha3_384_hmac", CKM_SHA3_384_HMAC},
+    {"ckm_sha3_512_hmac", CKM_SHA3_512_HMAC},
+
+    /* SHA based HMAC algorithms with selectable output length */
+    {"ckm_sha1_hmac_general", CKM_SHA_1_HMAC_GENERAL},
+    {"ckm_sha224_hmac_general", CKM_SHA224_HMAC_GENERAL},
+    {"ckm_sha256_hmac_general", CKM_SHA256_HMAC_GENERAL},
+    {"ckm_sha384_hmac_general", CKM_SHA384_HMAC_GENERAL},
+    {"ckm_sha512_hmac_general", CKM_SHA512_HMAC_GENERAL},
+    {"ckm_sha3_224_hmac_general", CKM_SHA3_224_HMAC_GENERAL},
+    {"ckm_sha3_256_hmac_general", CKM_SHA3_256_HMAC_GENERAL},
+    {"ckm_sha3_384_hmac_general", CKM_SHA3_384_HMAC_GENERAL},
+    {"ckm_sha3_512_hmac_general", CKM_SHA3_512_HMAC_GENERAL},
+
+    
+    {"ckm_generic_secret_key_gen", CKM_GENERIC_SECRET_KEY_GEN},
+
     {NULL, 0}
 };
 
@@ -569,7 +582,11 @@ static ErlNifFunc nif_funcs[] = {
   {"n_generate_random", 3, generate_random},
   {"n_destroy_object", 3, destroy_object},
   {"n_list_mechanisms", 2, list_mechanisms},
-  {"n_mechanism_info", 3, mechanism_info}
+  {"n_mechanism_info", 3, mechanism_info},
+  {"n_sign", 3, sign},
+  {"n_sign_init", 4, sign_init},
+  {"n_sign_update", 3, sign_update},
+  {"n_sign_final", 2, sign_final}
 };
 
 /* Implementation of load_module/1: Load a PKCS#11 module, get the function list, 
@@ -1005,7 +1022,6 @@ static ERL_NIF_TERM session_login(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
   return enif_make_atom(env, "ok");
 }
 
-// TODO check and test
 static ERL_NIF_TERM session_logout(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
   CK_RV rv = CKR_GENERAL_ERROR;
@@ -1882,6 +1898,33 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
       break;
     }
 
+    case CKM_AES_CMAC_GENERAL: {
+      ERL_NIF_TERM mac_len_term;
+      CK_ULONG mac_len = 0;
+      CK_ULONG_PTR params = NULL;
+
+      if (!enif_get_map_value(env, map, enif_make_atom(env, "mac_len"), &mac_len_term)
+          || !enif_get_ulong(env, mac_len_term, &mac_len)) {
+        return enif_make_tuple3(env, 
+          enif_make_atom(env, "error"), 
+          enif_make_atom(env, "invalid_mac_len_parameter"), mac_len_term);
+      }
+      
+      params = (CK_ULONG_PTR) calloc(1, sizeof(CK_ULONG));
+      if (params == NULL) {
+        return enif_make_tuple2(env, 
+          enif_make_atom(env, "error"), 
+          enif_make_atom(env, "memory_allocation_failed"));
+      }
+
+      *params = mac_len;
+      mechanism->pParameter = params;
+      mechanism->ulParameterLen = sizeof(CK_ULONG);
+
+      break;
+    }
+
+
     default:
       return enif_make_tuple2(
         env,
@@ -2188,11 +2231,11 @@ static ERL_NIF_TERM encrypt_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
   ULONG_ARG(env, argv[3], key_handle);
 
   mech_conversion_result = term_to_mechanism(env, argv[2], &mechanism);
-  P11_debug("generate_key: mech_conversion_result=%T", mech_conversion_result);
+  P11_debug("encrypt_init: mech_conversion_result=%T", mech_conversion_result);
   if (enif_compare(mech_conversion_result, enif_make_atom(env, "ok")) != 0) {
     return mech_conversion_result;
   }
-  P11_debug("generate_key: converted mechanism %p", &mechanism);
+  P11_debug("encrypt_init: converted mechanism %p", &mechanism);
   P11_debug_mechanism(&mechanism);
 
   P11_call(rv, p11_module, C_EncryptInit, session_handle, &mechanism, key_handle);
@@ -2324,6 +2367,7 @@ static ERL_NIF_TERM encrypt_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
     data_in.data, data_in.size, data_out.data, &actual_res_len);
   P11_debug("C_EncryptUpdate result length: %lu", actual_res_len);
   if (rv != CKR_OK) {
+    enif_release_binary(&data_out);
     return P11_error(env, "C_EncryptUpdate", rv);
   }
 
@@ -2422,7 +2466,7 @@ static ERL_NIF_TERM decrypt_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
   ULONG_ARG(env, argv[3], key_handle);
 
   mech_conversion_result = term_to_mechanism(env, argv[2], &mechanism);
-  P11_debug("generate_key: mech_conversion_result=%T", mech_conversion_result);
+  P11_debug("decrypt_init: mech_conversion_result=%T", mech_conversion_result);
   if (enif_compare(mech_conversion_result, enif_make_atom(env, "ok")) != 0) {
     return mech_conversion_result;
   }
@@ -2794,6 +2838,219 @@ static ERL_NIF_TERM mechanism_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
             enif_make_ulong(env, mechanism_info.ulMaxKeySize), 
             enif_make_ulong(env, mechanism_info.flags)));
 }
+
+/*
+         _____ _             _            
+        / ___/(_)___ _____  (_)___  ____ _
+        \__ \/ / __ `/ __ \/ / __ \/ __ `/
+       ___/ / / /_/ / / / / / / / / /_/ / 
+      /____/_/\__, /_/ /_/_/_/ /_/\__, /  
+             /____/              /____/   
+*/
+
+static ERL_NIF_TERM sign_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  CK_OBJECT_HANDLE key_handle = 0;
+  CK_MECHANISM mechanism = {0};
+  ERL_NIF_TERM mech_conversion_result;
+
+  P11_debug("sign_init: enter");
+  REQUIRE_ARGS(env, argc, 4);
+
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[1]: session handle */
+  ULONG_ARG(env, argv[1], session_handle);
+
+  /* argv[3]: key handle */
+  ULONG_ARG(env, argv[3], key_handle);
+
+  /* argv[2]: mechanism type */
+  mech_conversion_result = term_to_mechanism(env, argv[2], &mechanism);
+  P11_debug("sign_init: mechanism conversion result: %T", mech_conversion_result);
+  if (enif_compare(mech_conversion_result, enif_make_atom(env, "ok")) != 0) {
+    return mech_conversion_result;
+  }
+  P11_debug("sign_init: converted mechanism %p", &mechanism);
+  P11_debug_mechanism(&mechanism);
+  
+  P11_call(rv, p11_module, C_SignInit, session_handle, &mechanism, key_handle);
+  if (rv != CKR_OK) {
+    if (mechanism.pParameter != NULL) {
+      free(mechanism.pParameter);
+    }
+    return P11_error(env, "C_SignInit", rv);
+  }
+
+  if (mechanism.pParameter != NULL) {
+    free(mechanism.pParameter);
+  }
+
+  return enif_make_atom(env, "ok");
+}
+
+static ERL_NIF_TERM sign(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  ErlNifBinary data_in = {0}, data_out = {0};
+  ERL_NIF_TERM data_out_term;
+  CK_ULONG res_len1 = 0, res_len2 = 0;
+
+  P11_debug("sign: enter");
+  REQUIRE_ARGS(env, argc, 3);
+
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[1]: session handle */
+  ULONG_ARG(env, argv[1], session_handle);
+
+  /* argv[2]: data */
+  if (!enif_inspect_binary(env, argv[2], &data_in)) {
+    return enif_make_badarg(env);
+  }
+
+  /* Call the function with NULL as the output buffer, to get the size of the output */
+  P11_debug("sign: calling C_Sign with NULL output buffer to get the size of the output");
+  P11_call(rv, p11_module, C_Sign, session_handle, data_in.data, data_in.size, NULL_PTR, &res_len1);
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_Sign", rv);
+  }
+  P11_debug("sign: C_Sign expected output size: %lu", res_len1);
+
+  if (!enif_alloc_binary(res_len1, &data_out)) {
+    return enif_make_tuple2(env, 
+      enif_make_atom(env, "error"), 
+      enif_make_atom(env, "memory_allocation_failed"));
+  }
+
+  secure_zero(data_out.data, data_out.size);
+
+  P11_debug("sign: calling C_Sign with the allocated output buffer");
+  res_len2 = data_out.size;
+  P11_call(rv, p11_module, C_Sign, session_handle, data_in.data, data_in.size, data_out.data, &res_len2);
+  P11_debug("sign: C_Sign result length: %lu  ", res_len2);
+
+  if (rv != CKR_OK) {
+    enif_release_binary(&data_out);
+    return P11_error(env, "C_Sign", rv);
+  }
+  
+  if (res_len2 != data_out.size) {
+    enif_release_binary(&data_out);
+    return enif_make_tuple2(env, 
+      enif_make_atom(env, "error"), 
+      enif_make_atom(env, "unexpected_output_length"));
+  }
+
+  data_out_term = enif_make_binary(env, &data_out);
+  return enif_make_tuple2(env, enif_make_atom(env, "ok"), data_out_term);
+}
+
+static ERL_NIF_TERM sign_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  ErlNifBinary data_in = {0};
+
+  P11_debug("sign_update: enter");
+  REQUIRE_ARGS(env, argc, 3);
+
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[1]: session handle */
+  ULONG_ARG(env, argv[1], session_handle);
+
+  /* argv[2]: data */
+  if (!enif_inspect_binary(env, argv[2], &data_in)) {
+    return enif_make_badarg(env);
+  }
+
+  P11_call(rv, p11_module, C_SignUpdate, session_handle, data_in.data, data_in.size);
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_SignUpdate", rv);
+  }
+
+  return enif_make_atom(env, "ok");
+}
+
+static ERL_NIF_TERM sign_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  ErlNifBinary data_out = {0};
+  ERL_NIF_TERM data_out_term;
+  CK_ULONG expected_res_len = 0;
+  CK_ULONG actual_res_len = 0;
+
+  P11_debug("sign_final: enter");
+  REQUIRE_ARGS(env, argc, 2);
+
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[1]: session handle */
+  ULONG_ARG(env, argv[1], session_handle);
+
+  P11_debug("sign_final: Calling C_SignFinal with NULL output buffer to get the size of the output");
+  P11_call(rv, p11_module, C_SignFinal, session_handle, NULL_PTR, &expected_res_len);
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_SignFinal", rv);
+  }
+  P11_debug("sign_final: C_SignFinal expected output size: %lu", expected_res_len);
+
+  if (!enif_alloc_binary(expected_res_len, &data_out)) {
+    return enif_make_tuple2(env, 
+      enif_make_atom(env, "error"), 
+      enif_make_atom(env, "memory_allocation_failed"));
+  }
+  secure_zero(data_out.data, data_out.size);
+
+  actual_res_len = data_out.size;
+  P11_call(rv, p11_module, C_SignFinal, session_handle, data_out.data, &actual_res_len);
+  P11_debug("sign_final: C_SignFinal result length: %lu", actual_res_len);
+  if (rv != CKR_OK) {
+    enif_release_binary(&data_out);
+    return P11_error(env, "C_SignFinal", rv);
+  }
+
+  if (actual_res_len != expected_res_len) {
+    enif_release_binary(&data_out);
+    return enif_make_tuple2(env, 
+      enif_make_atom(env, "error"), 
+      enif_make_atom(env, "unexpected_output_length"));
+  }
+
+  data_out_term = enif_make_binary(env, &data_out);
+
+  return enif_make_tuple2(env, enif_make_atom(env, "ok"), data_out_term);
+}  
+
+/*
+    __  __     __                   ______                 __  _                 
+   / / / /__  / /___  ___  _____   / ____/_  ______  _____/ /_(_)___  ____  _____
+  / /_/ / _ \/ / __ \/ _ \/ ___/  / /_  / / / / __ \/ ___/ __/ / __ \/ __ \/ ___/
+ / __  /  __/ / /_/ /  __/ /     / __/ / /_/ / / / / /__/ /_/ / /_/ / / / (__  ) 
+/_/ /_/\___/_/ .___/\___/_/     /_/    \__,_/_/ /_/\___/\__/_/\____/_/ /_/____/  
+            /_/                                                                  
+*/
 
 /* Forward declaration for the new function */
 static const char* ckr_to_string(CK_RV rv);

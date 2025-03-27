@@ -227,6 +227,25 @@ defmodule P11ex.Lib do
 
   end
 
+  @typedoc """
+  A mechanism instance represents a cryptographic mechanism with the
+  associated parameters. A mechanism can either be identified by an
+  atom (e.g. `:aes_cbc`) or a non-negative integer (e.g. `1`). Some
+  mechanisms require additional parameters that are passed as a map.
+
+  Example:
+  ```elixir
+  {:ckm_aes_cbc, %{iv: iv}
+  ```
+  This is AES in CBC mode with the initialization vector `iv`
+  (a binary of 16 bytes).
+  """
+  @type mechanism_instance ::
+      {atom()}
+      | {non_neg_integer()}
+      | {atom(), map()}
+      | {non_neg_integer(), map()}
+
   @on_load :load_nifs
 
   def load_nifs do
@@ -297,6 +316,8 @@ defmodule P11ex.Lib do
     end
   end
 
+  @spec session_login(SessionHandle.t(), atom(), binary())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
   def session_login(%SessionHandle{} = session, user_type, pin)
       when is_atom(user_type) and is_binary(pin) do
     user_type_flag = P11ex.Flags.from_atoms(:user_type, MapSet.new([user_type]))
@@ -305,6 +326,8 @@ defmodule P11ex.Lib do
                     user_type_flag, String.to_charlist(pin))
   end
 
+  @spec session_logout(SessionHandle.t())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
   def session_logout(%SessionHandle{} = session) do
     n_session_logout(session.module.ref(), session.handle)
   end
@@ -388,6 +411,7 @@ defmodule P11ex.Lib do
     end
   end
 
+  @spec encrypt_init(SessionHandle.t(), any(), ObjectHandle.t()) :: :ok | {:error, atom()} | {:error, atom(), any()}
   def encrypt_init(%SessionHandle{} = session, mechanism, %ObjectHandle{} = key) do
     n_encrypt_init(session.module.ref, session.handle, mechanism, key.handle)
   end
@@ -421,6 +445,58 @@ defmodule P11ex.Lib do
   def generate_random(%SessionHandle{} = session, len)
       when is_integer(len) and len > 0 do
     n_generate_random(session.module.ref, session.handle, len)
+  end
+
+  @doc """
+  Initialize a signing operation or MAC computation. The `key`'s type
+  must be suitable for the specified `mechanism`. If the initialization
+  is successful, the session's current operation is set to `:sign`. This
+  operation can be finalized by calling `sign_final/1` or `sign/2`. Also,
+  a failure of `sign_update/2` will end this state.
+  """
+  @spec sign_init(SessionHandle.t(), mechanism_instance(), ObjectHandle.t())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  def sign_init(%SessionHandle{} = session, mechanism, %ObjectHandle{} = key)
+      when is_tuple(mechanism) do
+    n_sign_init(session.module.ref, session.handle, mechanism, key.handle)
+  end
+
+  @doc """
+  Provide data to the signing operation or MAC computation. The session must
+  be in the `:sign` state, so this function must be called after `sign_init/3`.
+  Call this function repeatedly with chunks of data until all data has been
+  provided. If the operation fails, the session's current operation is reset.
+  """
+  @spec sign_update(SessionHandle.t(), binary())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  def sign_update(%SessionHandle{} = session, data)
+      when is_binary(data) do
+    n_sign_update(session.module.ref, session.handle, data)
+  end
+
+  @doc """
+  Finalize the signing operation or MAC computation. The session must
+  be in the `:sign` state, so this function must be called after
+  `sign_init/3` and `sign_update/2`. If the operation fails, the session's
+  current operation is reset. The function returns the signature or MAC.
+  """
+  @spec sign_final(SessionHandle.t())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  def sign_final(%SessionHandle{} = session) do
+    n_sign_final(session.module.ref, session.handle)
+  end
+
+  @doc """
+  Sign or MAC data. The session must be in the `:sign` state, so this function
+  must be called after `sign_init/3`. If the operation
+  fails, the session's current operation is reset. The function returns the
+  signature or MAC.
+  """
+  @spec sign(SessionHandle.t(), binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  def sign(%SessionHandle{} = session, data)
+      when is_binary(data) do
+    n_sign(session.module.ref, session.handle, data)
   end
 
   def destroy_object(%SessionHandle{} = session, %ObjectHandle{} = object) do
@@ -503,11 +579,15 @@ defmodule P11ex.Lib do
     raise "NIF session_info/1 not implemented"
   end
 
+  @spec n_session_login(reference(), non_neg_integer(), non_neg_integer(), charlist())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
   defp n_session_login(_p11_module, _session, _user_type, _pin) do
     # This function will be implemented in NIF
     raise "NIF session_login/4 not implemented"
   end
 
+  @spec n_session_logout(reference(), non_neg_integer())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
   defp n_session_logout(_p11_module, _session) do
     # This function will be implemented in NIF
     raise "NIF session_logout/1 not implemented"
@@ -586,6 +666,34 @@ defmodule P11ex.Lib do
   defp n_generate_random(_p11_module, _session, _requested_length) do
     # This function will be implemented in NIF
     raise "NIF generate_random/3 not implemented"
+  end
+
+  @spec n_sign_init(reference(), non_neg_integer(), tuple(), non_neg_integer())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  defp n_sign_init(_p11_module, _session, _mechanism, _key) do
+    # This function will be implemented in NIF
+    raise "NIF sign_init/4 not implemented"
+  end
+
+  @spec n_sign(reference(), non_neg_integer(), binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  defp n_sign(_p11_module, _session, _data) do
+    # This function will be implemented in NIF
+    raise "NIF sign/5 not implemented"
+  end
+
+  @spec n_sign_update(reference(), non_neg_integer(), binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  defp n_sign_update(_p11_module, _session, _data) do
+    # This function will be implemented in NIF
+    raise "NIF sign_update/3 not implemented"
+  end
+
+  @spec n_sign_final(reference(), non_neg_integer())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  defp n_sign_final(_p11_module, _session) do
+    # This function will be implemented in NIF
+    raise "NIF sign_final/2 not implemented"
   end
 
 end

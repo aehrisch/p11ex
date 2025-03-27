@@ -170,6 +170,56 @@ defmodule P11ex.Session do
     GenServer.call(server, :decrypt_final)
   end
 
+  @doc """
+  Initialize a signing operation or MAC computation involving
+  the specified `mechanism` and `key`. The key type must be suitable for
+  the specified `mechanism`. If the initialization is successful, the
+  session's current operation is set to `:sign`. This operation can be
+  finalized by calling `sign_final/1` or `sign/2`. Also, a failure of
+  `sign_update/2` will end this state.
+  """
+  @spec sign_init(server :: GenServer.server(), Lib.mechanism_instance(), ObjectHandle.t())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  def sign_init(server \\ __MODULE__, mechanism, %ObjectHandle{} = key)
+      when is_tuple(mechanism) do
+    GenServer.call(server, {:sign_init, mechanism, key})
+  end
+
+  @doc """
+  Sign or MAC data. The session must be in the `:sign` state, so this function
+  must be called after `sign_init/3`. If the operation fails, the session's
+  current operation is reset. The function returns the signature or MAC.
+  """
+  @spec sign(server :: GenServer.server(), binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  def sign(server \\ __MODULE__, data) when is_binary(data) do
+    GenServer.call(server, {:sign, data})
+  end
+
+  @doc """
+  Provide data to the signing operation or MAC computation. The session must
+  be in the `:sign` state, so this function must be called after `sign_init/3`.
+  Call this function repeatedly with chunks of data until all data has been
+  provided. If the operation fails, the session's current operation is reset.
+  """
+  @spec sign_update(server :: GenServer.server(), binary())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  def sign_update(server \\ __MODULE__, data) when is_binary(data) do
+    GenServer.call(server, {:sign_update, data})
+  end
+
+  @doc """
+  Finalize the signing operation or MAC computation. The session must
+  be in the `:sign` state, so this function must be called after
+  `sign_init/3` and `sign_update/2`. If the operation fails, the session's
+  current operation is reset. The function returns the signature or MAC.
+  """
+  @spec sign_final(server :: GenServer.server())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  def sign_final(server \\ __MODULE__) do
+    GenServer.call(server, :sign_final)
+  end
+
   def destroy_object(server \\ __MODULE__, %ObjectHandle{} = object) do
     GenServer.call(server, {:destroy_object, object})
   end
@@ -312,6 +362,41 @@ defmodule P11ex.Session do
   def handle_call(:decrypt_final, _from, state) do
     case Lib.decrypt_final(state.session) do
       {:ok, op} -> {:reply, {:ok, op}, %{state | current_op: nil}}
+      err -> {:reply, err, %{state | current_op: nil}}
+    end
+  end
+
+  @impl true
+  def handle_call({:sign_init, mechanism, %ObjectHandle{} = key}, _from, state)
+      when is_tuple(mechanism) do
+    case Lib.sign_init(state.session, mechanism, key) do
+      :ok -> {:reply, :ok, %{state | current_op: :sign}}
+      err -> {:reply, err, %{state | current_op: nil}}
+    end
+  end
+
+  @impl true
+  def handle_call({:sign, data}, _from, state)
+      when is_binary(data) do
+    case Lib.sign(state.session, data) do
+      {:ok, sig} -> {:reply, {:ok, sig}, %{state | current_op: nil}}
+      err -> {:reply, err, %{state | current_op: nil}}
+    end
+  end
+
+  @impl true
+  def handle_call({:sign_update, data}, _from, state)
+      when is_binary(data) do
+    case Lib.sign_update(state.session, data) do
+      :ok -> {:reply, :ok, %{state | current_op: :sign}}
+      err -> {:reply, err, %{state | current_op: nil}}
+    end
+  end
+
+  @impl true
+  def handle_call(:sign_final, _from, state) do
+    case Lib.sign_final(state.session) do
+      {:ok, sig} -> {:reply, {:ok, sig}, %{state | current_op: nil}}
       err -> {:reply, err, %{state | current_op: nil}}
     end
   end
