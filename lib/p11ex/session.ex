@@ -277,6 +277,16 @@ defmodule P11ex.Session do
     GenServer.call(server, {:destroy_object, object})
   end
 
+  @doc """
+  Generate random data.
+  """
+  @spec generate_random(server :: GenServer.server(), len :: non_neg_integer())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  def generate_random(server \\ __MODULE__, len)
+      when is_integer(len) and len > 0 do
+    GenServer.call(server, {:generate_random, len})
+  end
+
   ###
   ### Implementation of callbacks
 
@@ -485,6 +495,17 @@ defmodule P11ex.Session do
       when is_binary(data) do
     case Lib.digest(state.session, data) do
       {:ok, digest} -> {:reply, {:ok, digest}, state}
+      err -> {:reply, err, state}
+    end
+  end
+
+  @spec generate_random(server :: GenServer.server(), len :: non_neg_integer())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  @impl true
+  def handle_call({:generate_random, len}, _from, state)
+      when is_integer(len) and len > 0 do
+    case Lib.generate_random(state.session, len) do
+      {:ok, random} -> {:reply, {:ok, random}, state}
       err -> {:reply, err, state}
     end
   end

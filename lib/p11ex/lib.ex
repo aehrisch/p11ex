@@ -442,6 +442,8 @@ defmodule P11ex.Lib do
     n_decrypt_final(session.module.ref, session.handle)
   end
 
+  @spec generate_random(SessionHandle.t(), non_neg_integer())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   def generate_random(%SessionHandle{} = session, len)
       when is_integer(len) and len > 0 do
     n_generate_random(session.module.ref, session.handle, len)
