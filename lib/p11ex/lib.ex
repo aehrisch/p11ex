@@ -499,6 +499,56 @@ defmodule P11ex.Lib do
     n_sign(session.module.ref, session.handle, data)
   end
 
+  @doc """
+  Initialize a digest operation. The session's current operation is set to
+  `:digest`. Use `digest_update/2` to provide data to the digest operation.
+  Call `digest_final/1` to finalize the operation and get the digest. Or, call
+  `digest/2` to provide all data at once and get the digest in one go.
+  """
+  @spec digest_init(SessionHandle.t(), mechanism_instance())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  def digest_init(%SessionHandle{} = session, mechanism)
+      when is_tuple(mechanism) do
+    n_digest_init(session.module.ref, session.handle, mechanism)
+  end
+
+  @doc """
+  Provide data to the digest operation. The session must be in the `:digest`
+  state, so this function must be called after `digest_init/2`. Call this
+  function repeatedly with chunks of data until all data has been provided.
+  If the operation fails, the session's current operation is reset.
+  """
+  @spec digest_update(SessionHandle.t(), binary())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  def digest_update(%SessionHandle{} = session, data)
+      when is_binary(data) do
+    n_digest_update(session.module.ref, session.handle, data)
+  end
+
+  @doc """
+  Finalize the digest operation. The session must be in the `:digest` state,
+  so this function must be called after `digest_init/2` and `digest_update/2`.
+  If the operation fails, the session's current operation is reset. The function
+  returns the digest.
+  """
+  @spec digest_final(SessionHandle.t())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  def digest_final(%SessionHandle{} = session) do
+    n_digest_final(session.module.ref, session.handle)
+  end
+
+  @doc """
+  Get the digest of the data provided to the digest operation. The session must
+  be in the `:digest` state, so this function must be called after `digest_init/2`.
+  Use `digest/2` to provide all data at once and get the digest in one go.
+  """
+  @spec digest(SessionHandle.t(), binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  def digest(%SessionHandle{} = session, data)
+      when is_binary(data) do
+    n_digest(session.module.ref, session.handle, data)
+  end
+
   def destroy_object(%SessionHandle{} = session, %ObjectHandle{} = object) do
     n_destroy_object(session.module.ref, session.handle, object.handle)
   end
@@ -694,6 +744,26 @@ defmodule P11ex.Lib do
   defp n_sign_final(_p11_module, _session) do
     # This function will be implemented in NIF
     raise "NIF sign_final/2 not implemented"
+  end
+
+  defp n_digest_init(_p11_module, _session, _mechanism) do
+    # This function will be implemented in NIF
+    raise "NIF digest_init/3 not implemented"
+  end
+
+  defp n_digest_update(_p11_module, _session, _data) do
+    # This function will be implemented in NIF
+    raise "NIF digest_update/3 not implemented"
+  end
+
+  defp n_digest_final(_p11_module, _session) do
+    # This function will be implemented in NIF
+    raise "NIF digest_final/2 not implemented"
+  end
+
+  defp n_digest(_p11_module, _session, _data) do
+    # This function will be implemented in NIF
+    raise "NIF digest/2 not implemented"
   end
 
 end

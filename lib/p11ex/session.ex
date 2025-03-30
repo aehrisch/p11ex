@@ -220,6 +220,59 @@ defmodule P11ex.Session do
     GenServer.call(server, :sign_final)
   end
 
+  @doc """
+  Initialize a digest operation involving the specified `mechanism`. The session's
+  current operation is set to `:digest`. This operation can be finalized by calling
+  `digest_final/1` or `digest/1`. Also, a failure of `digest_update/2` will end
+  this state.
+  """
+  @spec digest_init(server :: GenServer.server(), Lib.mechanism_instance())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  def digest_init(server \\ __MODULE__, mechanism)
+      when is_tuple(mechanism) do
+    GenServer.call(server, {:digest_init, mechanism})
+  end
+
+  @doc """
+  Provide data to the digest operation. The session must be in the `:digest` state,
+  so this function must be called after `digest_init/2`. Call this function repeatedly
+  with chunks of data until all data has been provided. If the operation fails, the
+  session's current operation is reset.
+  """
+  @spec digest_update(server :: GenServer.server(), binary())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  def digest_update(server \\ __MODULE__, data) do
+    GenServer.call(server, {:digest_update, data})
+  end
+
+  @doc """
+  Finalize the digest operation. The session must be in the `:digest` state,
+  so this function must be called after `digest_init/2` and `digest_update/2`.
+  If the operation fails, the session's current operation is reset. The function
+  returns the digest.
+  """
+  @spec digest_final(server :: GenServer.server())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  def digest_final(server \\ __MODULE__) do
+    GenServer.call(server, :digest_final)
+  end
+
+  @doc """
+  Get the digest of the data provided to the digest operation. The session must be in the `:digest` state,
+  so this function must be called after `digest_init/2` and `digest_update/2`.
+  """
+  @spec digest(server :: GenServer.server(), binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  def digest(server \\ __MODULE__, data)
+      when is_binary(data) do
+    GenServer.call(server, {:digest, data})
+  end
+
+  @doc """
+  Destroy the object specified by `object`.
+  """
+  @spec destroy_object(server :: GenServer.server(), ObjectHandle.t())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
   def destroy_object(server \\ __MODULE__, %ObjectHandle{} = object) do
     GenServer.call(server, {:destroy_object, object})
   end
@@ -398,6 +451,41 @@ defmodule P11ex.Session do
     case Lib.sign_final(state.session) do
       {:ok, sig} -> {:reply, {:ok, sig}, %{state | current_op: nil}}
       err -> {:reply, err, %{state | current_op: nil}}
+    end
+  end
+
+  @impl true
+  def handle_call({:digest_init, mechanism}, _from, state)
+      when is_tuple(mechanism) do
+    case Lib.digest_init(state.session, mechanism) do
+      :ok -> {:reply, :ok, %{state | current_op: :digest}}
+      err -> {:reply, err, %{state | current_op: nil}}
+    end
+  end
+
+  @impl true
+  def handle_call({:digest_update, data}, _from, state)
+      when is_binary(data) do
+    case Lib.digest_update(state.session, data) do
+      :ok -> {:reply, :ok, %{state | current_op: :digest}}
+      err -> {:reply, err, %{state | current_op: nil}}
+    end
+  end
+
+  @impl true
+  def handle_call(:digest_final, _from, state) do
+    case Lib.digest_final(state.session) do
+      {:ok, digest} -> {:reply, {:ok, digest}, %{state | current_op: nil}}
+      err -> {:reply, err, %{state | current_op: nil}}
+    end
+  end
+
+  @impl true
+  def handle_call({:digest, data}, _from, state)
+      when is_binary(data) do
+    case Lib.digest(state.session, data) do
+      {:ok, digest} -> {:reply, {:ok, digest}, state}
+      err -> {:reply, err, state}
     end
   end
 
