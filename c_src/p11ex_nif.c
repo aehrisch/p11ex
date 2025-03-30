@@ -214,6 +214,11 @@ static ERL_NIF_TERM sign_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
 static ERL_NIF_TERM sign_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM sign(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 
+static ERL_NIF_TERM digest_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM digest_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM digest_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM digest(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+
 static ERL_NIF_TERM destroy_object(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM list_mechanisms(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM mechanism_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
@@ -482,7 +487,18 @@ static const mechanism_map_t mechanism_map[] = {
     {"ckm_sha3_384_hmac_general", CKM_SHA3_384_HMAC_GENERAL},
     {"ckm_sha3_512_hmac_general", CKM_SHA3_512_HMAC_GENERAL},
 
-    
+    /* SHA digest algorithms */
+    {"ckm_sha1", CKM_SHA_1},
+    {"ckm_sha224", CKM_SHA224},
+    {"ckm_sha256", CKM_SHA256},
+    {"ckm_sha384", CKM_SHA384},
+    {"ckm_sha512", CKM_SHA512},
+    {"ckm_sha3_224", CKM_SHA3_224},
+    {"ckm_sha3_256", CKM_SHA3_256},
+    {"ckm_sha3_384", CKM_SHA3_384},
+    {"ckm_sha3_512", CKM_SHA3_512},
+
+    /* Other algorithms */  
     {"ckm_generic_secret_key_gen", CKM_GENERIC_SECRET_KEY_GEN},
 
     {NULL, 0}
@@ -586,7 +602,11 @@ static ErlNifFunc nif_funcs[] = {
   {"n_sign", 3, sign},
   {"n_sign_init", 4, sign_init},
   {"n_sign_update", 3, sign_update},
-  {"n_sign_final", 2, sign_final}
+  {"n_sign_final", 2, sign_final},
+  {"n_digest_init", 3, digest_init},
+  {"n_digest_update", 3, digest_update},
+  {"n_digest_final", 2, digest_final},
+  {"n_digest", 3, digest}
 };
 
 /* Implementation of load_module/1: Load a PKCS#11 module, get the function list, 
@@ -3042,6 +3062,211 @@ static ERL_NIF_TERM sign_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
 
   return enif_make_tuple2(env, enif_make_atom(env, "ok"), data_out_term);
 }  
+
+/*
+         ____  _                 __ 
+        / __ \(_)___ ____  _____/ /_
+       / / / / / __ `/ _ \/ ___/ __/
+      / /_/ / / /_/ /  __(__  ) /_  
+     /_____/_/\__, /\___/____/\__/  
+             /____/                 
+*/
+
+static ERL_NIF_TERM digest_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  CK_MECHANISM mechanism = {0};
+  ERL_NIF_TERM conversion_result;
+
+  P11_debug("digest_init: enter");
+  REQUIRE_ARGS(env, argc, 3);
+  
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[1]: session handle */
+  ULONG_ARG(env, argv[1], session_handle);
+
+  /* argv[2]: mechanism type */
+  conversion_result = term_to_mechanism(env, argv[2], &mechanism);
+  P11_debug("digest_init: mechanism conversion result: %T", conversion_result);
+  if (enif_compare(conversion_result, enif_make_atom(env, "ok")) != 0) {
+    return conversion_result;
+  }
+  P11_debug("digest_init: converted mechanism %p", &mechanism);
+  P11_debug_mechanism(&mechanism);
+
+  P11_call(rv, p11_module, C_DigestInit, session_handle, &mechanism);
+  if (rv != CKR_OK) {
+    if (mechanism.pParameter != NULL) {
+      free(mechanism.pParameter);
+    }
+    return P11_error(env, "C_DigestInit", rv);
+  }
+
+  if (mechanism.pParameter != NULL) {
+    free(mechanism.pParameter);
+  }
+
+  return enif_make_atom(env, "ok");
+}
+
+static ERL_NIF_TERM digest(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  ErlNifBinary data_in = {0}, data_out = {0};
+  ERL_NIF_TERM data_out_term;
+  CK_ULONG expected_res_len = 0;
+  CK_ULONG actual_res_len = 0;
+
+  P11_debug("digest: enter");
+  REQUIRE_ARGS(env, argc, 3);
+
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[1]: session handle */
+  ULONG_ARG(env, argv[1], session_handle);
+
+  /* argv[2]: data */
+  if (!enif_inspect_binary(env, argv[2], &data_in)) {
+    return enif_make_badarg(env);
+  }
+
+  /* Call the function with NULL as the output buffer, to get the size of the output */
+  P11_debug("digest: calling C_Digest with NULL output buffer to get the size of the output");
+  P11_call(rv, p11_module, C_Digest, session_handle, data_in.data, data_in.size, NULL_PTR, &expected_res_len);
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_Digest", rv);
+  }
+  P11_debug("digest: C_Digest expected output size: %lu", expected_res_len);
+  
+  if (!enif_alloc_binary(expected_res_len, &data_out)) {
+    return enif_make_tuple2(env, 
+      enif_make_atom(env, "error"), 
+      enif_make_atom(env, "memory_allocation_failed"));
+  }
+  
+  secure_zero(data_out.data, data_out.size);
+  
+  P11_debug("digest: calling C_Digest with the allocated output buffer");
+  actual_res_len = data_out.size;
+  P11_call(rv, p11_module, C_Digest, session_handle, data_in.data, data_in.size, data_out.data, &actual_res_len);
+  P11_debug("digest: C_Digest result length: %lu", actual_res_len);
+
+  if (rv != CKR_OK) {
+    enif_release_binary(&data_out);
+    return P11_error(env, "C_Digest", rv);
+  }
+
+  if (actual_res_len != expected_res_len) {
+    enif_release_binary(&data_out);
+    return enif_make_tuple2(env, 
+      enif_make_atom(env, "error"), 
+      enif_make_atom(env, "unexpected_output_length"));
+  }
+
+  data_out_term = enif_make_binary(env, &data_out);
+  return enif_make_tuple2(env, enif_make_atom(env, "ok"), data_out_term);
+}
+
+
+static ERL_NIF_TERM digest_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  ErlNifBinary data_in = {0};
+
+  P11_debug("digest_update: enter");
+  REQUIRE_ARGS(env, argc, 3);
+
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[1]: session handle */
+  ULONG_ARG(env, argv[1], session_handle);
+
+  /* argv[2]: data */
+  if (!enif_inspect_binary(env, argv[2], &data_in)) {
+    return enif_make_badarg(env);
+  }
+
+  P11_call(rv, p11_module, C_DigestUpdate, session_handle, data_in.data, data_in.size);
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_DigestUpdate", rv);
+  }
+
+  return enif_make_atom(env, "ok");
+}
+
+static ERL_NIF_TERM digest_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  ErlNifBinary data_out = {0};
+  ERL_NIF_TERM data_out_term;
+  CK_ULONG expected_res_len = 0;
+  CK_ULONG actual_res_len = 0;
+
+  P11_debug("digest_final: enter");
+  REQUIRE_ARGS(env, argc, 2);
+
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  } 
+
+  /* argv[1]: session handle */
+  ULONG_ARG(env, argv[1], session_handle);
+
+  /* Call the function with NULL as the output buffer, to get the size of the output */
+  P11_debug("digest_final: calling C_DigestFinal with NULL output buffer to get the size of the output");
+  P11_call(rv, p11_module, C_DigestFinal, session_handle, NULL_PTR, &expected_res_len);
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_DigestFinal", rv);
+  }
+  P11_debug("digest_final: C_DigestFinal expected output size: %lu", expected_res_len);
+
+  if (!enif_alloc_binary(expected_res_len, &data_out)) {
+    return enif_make_tuple2(env, 
+      enif_make_atom(env, "error"), 
+      enif_make_atom(env, "memory_allocation_failed"));
+  }
+  secure_zero(data_out.data, data_out.size);
+
+  P11_debug("digest_final: calling C_DigestFinal with the allocated output buffer");
+  actual_res_len = data_out.size;
+  P11_call(rv, p11_module, C_DigestFinal, session_handle, data_out.data, &actual_res_len);
+  P11_debug("digest_final: C_DigestFinal result length: %lu", actual_res_len);
+  if (rv != CKR_OK) {
+    enif_release_binary(&data_out);
+    return P11_error(env, "C_DigestFinal", rv);
+  }
+
+  if (actual_res_len != expected_res_len) {
+    enif_release_binary(&data_out);
+    return enif_make_tuple2(env, 
+      enif_make_atom(env, "error"), 
+      enif_make_atom(env, "unexpected_output_length"));
+  }
+
+  data_out_term = enif_make_binary(env, &data_out);
+
+  return enif_make_tuple2(env, enif_make_atom(env, "ok"), data_out_term);
+}
+
 
 /*
     __  __     __                   ______                 __  _                 
