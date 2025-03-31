@@ -12,12 +12,6 @@ defmodule P11ex.YubikeyTest do
   This module runs some integration tests against a YubiKey PIV token.
   """
 
-  def setup_all do
-    System.put_env("PKCS11_MODULE", "/opt/homebrew/lib/libykcs11.dylib")
-    Application.put_env(:p11ex, :token_label, "YubiKey PIV #19666192")
-    #P11ex.TestHelper.setup_session()
-  end
-
   test "YubiKey, list slots" do
 
     {:ok, slots} = Module.list_slots(true)
