@@ -16,7 +16,7 @@ defmodule P11ExTest.MacTest do
 
     key_id = :crypto.strong_rand_bytes(16)
 
-    assert {:ok, key} =
+    assert {:ok, _key} =
       Session.generate_key(context.session_pid,
       {:ckm_aes_key_gen},
       [
@@ -45,7 +45,7 @@ defmodule P11ExTest.MacTest do
 
     key_id = :crypto.strong_rand_bytes(16)
 
-    assert {:ok, key} =
+    assert {:ok, _key} =
       Session.generate_key(context.session_pid,
       {:ckm_aes_key_gen},
       [
@@ -90,7 +90,7 @@ defmodule P11ExTest.MacTest do
 
     key_id = :crypto.strong_rand_bytes(16)
 
-    assert {:ok, key} =
+    assert {:ok, _key} =
       Session.generate_key(context.session_pid,
       {:ckm_generic_secret_key_gen},
       [

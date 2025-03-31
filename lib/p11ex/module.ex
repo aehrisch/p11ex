@@ -105,7 +105,7 @@ defmodule P11ex.Module do
   * `utc_time` - The UTC time of the token (a string)
   """
   @spec token_info(Slot.t()) :: {:ok, map()} | {:error, atom()}
-  def token_info(slot) do
+  def token_info(%Slot{} = slot) do
     GenServer.call(__MODULE__, {:token_info, slot})
   end
 

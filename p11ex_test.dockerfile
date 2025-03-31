@@ -10,7 +10,7 @@ RUN apt-get install -y \
     build-essential \
     autoconf \
     m4 \
-    softhsm2 \
+    softhsm2 ykcs11 \
     locales \
     && locale-gen en_US.UTF-8 \
     && update-locale LANG=en_US.UTF-8
