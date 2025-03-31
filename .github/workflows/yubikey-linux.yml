@@ -1,4 +1,4 @@
-name: SoftHSM Linux
+name: YubiKey Linux
 
 on:
   push:
@@ -7,62 +7,6 @@ on:
     branches: [ main ]
 
 jobs:
-
-  test-linux-amd64:
-    runs-on: ubuntu-latest
-    permissions:
-      checks: write
-      pull-requests: write
-      contents: read
-      packages: read
-    
-    steps:
-      - name: Cleanup workspace
-        run: |
-          sudo rm -rf ${{ github.workspace }}/*
-
-      - uses: actions/checkout@v4
-
-      - name: Pull linux-amd64 image
-        run: |
-          docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64
-
-      - name: Run tests in Docker
-        run: |
-          docker run --rm \
-            -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
-            -e MIX_ENV=test \
-            -e GITHUB_EVENT_PATH=/github/event.json \
-            -v ${{ github.workspace }}:/app \
-            -v ${{ github.event_path }}:/github/event.json \
-            ghcr.io/${{ github.repository }}/p11ex-test:latest \
-            sh -c "cd /app && \
-              sh test/softhsm-reset.sh && \
-              cd c_src && \
-              curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h && \
-              curl -z pkcs11t.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h && \
-              curl -z pkcs11f.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h && \
-              cd .. && \
-              # Install hex and get dependencies
-              mix local.hex --force && \
-              mix deps.get && \
-              mix compile --warnings-as-errors && \
-              mix test --cover --exclude yubikey || true"
-
-      - name: Upload test results and coverage (linux-amd64)
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-linux-amd64.zip
-          path: |
-            _build/test/lib/*/test-*.xml
-            cover/
-            cover/excoveralls.json
-            doc/
-
-      - name: Publish Test Results (linux-amd64)
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          files: "_build/test/lib/*/test-*.xml"
 
   test-linux-arm64:
     runs-on: [self-hosted, Linux, ARM64]
@@ -89,6 +33,7 @@ jobs:
             -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
             -e MIX_ENV=test \
             -e GITHUB_EVENT_PATH=/github/event.json \
+            -e PKCS11_MODULE=/usr/lib/aarch64-linux-gnu/libykcs11.so \
             -v ${{ github.workspace }}:/app \
             -v ${{ github.event_path }}:/github/event.json \
             ghcr.io/${{ github.repository }}/p11ex-test:latest \
@@ -103,7 +48,7 @@ jobs:
               mix local.hex --force && \
               mix deps.get && \
               mix compile --warnings-as-errors && \
-              mix test --cover || true"
+              mix test --cover --only yubikey || true"
 
       - name: Print workspace
         run: |
