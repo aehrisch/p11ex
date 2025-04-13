@@ -46,14 +46,31 @@ defmodule P11ExTest.RsaSign do
   test "sign CKM_RSA_PKCS", context do
     {pubk, prvk} = gen_keypair(context.session_pid)
 
+    # read the public key and make a public key record useable with the Erlang public_key module
+    {:ok, pubk_attrs, []} = Session.read_object(context.session_pid, pubk, Lib.ObjectAttributes.rsa_public_key())
+    rsa_pub_key = {:RSAPublicKey, pubk_attrs[:cka_modulus], pubk_attrs[:cka_public_exponent]}
+
     data = :crypto.strong_rand_bytes(64)
 
-    :ok = Session.sign_init(context.session_pid, {:ckm_rsa_pkcs}, prvk)
+    mechanisms = [
+      {:ckm_rsa_pkcs, :none},
+      {:ckm_sha1_rsa_pkcs, :sha},
+      {:ckm_sha224_rsa_pkcs, :sha224},
+      {:ckm_sha256_rsa_pkcs, :sha256},
+      {:ckm_sha384_rsa_pkcs, :sha384},
+      {:ckm_sha512_rsa_pkcs, :sha512}
+    ]
 
-    assert {:ok, signature} =
-      Session.sign(context.session_pid, data)
+    # loop through the mechanisms and sign the data, and verify the signature
+    mechanisms
+    |> Enum.each(fn {m, d} ->
+      :ok = Session.sign_init(context.session_pid, {m}, prvk)
 
-    IO.inspect(signature, label: "signature")
+      assert {:ok, signature} =
+        Session.sign(context.session_pid, data)
+
+      assert :public_key.verify(data, d, signature, rsa_pub_key) == true
+    end)
   end
 
 
