@@ -225,6 +225,79 @@ defmodule P11ex.Lib do
           :cka_value_len]))
     end
 
+    @doc """
+    Attributes that can be found on public keys.
+    """
+    @spec public_key() :: MapSet.t(atom())
+    def public_key do
+      MapSet.union(key(),
+        MapSet.new([
+          :cka_encrypt,
+          :cka_subject,
+          :cka_trusted,
+          :cka_verify,
+          :cka_wrap]))
+    end
+
+    @doc """
+    Attributes that can be found on RSA public keys.
+    """
+    @spec rsa_public_key() :: MapSet.t(atom())
+    def rsa_public_key do
+      MapSet.union(public_key(),
+        MapSet.new([:cka_modulus, :cka_modulus_bits, :cka_public_exponent]))
+    end
+
+    @doc """
+    Attributes that can be found on private keys.
+    """
+    @spec private_key() :: MapSet.t(atom())
+    def private_key do
+      MapSet.union(key(),
+        MapSet.new([
+          :cka_always_authenticate,
+          :cka_always_sensitive,
+          :cka_decrypt,
+          :cka_extractable,
+          :cka_never_extractable,
+          :cka_sensitive,
+          :cka_sign,
+          :cka_sign_recover,
+          :cka_unwrap,
+          :cka_wrap_with_trusted
+        ]))
+    end
+
+    @doc """
+    Attributes that can be found on RSA private keys.
+    """
+    @spec rsa_private_key() :: MapSet.t(atom())
+    def rsa_private_key do
+      MapSet.union(private_key(),
+        MapSet.new([
+          :cka_modulus,
+          :cka_public_exponent
+        ]))
+    end
+
+    @doc """
+    Attributes that can be found on RSA private keys that are sensitive. The token will
+    not return these attributes unless the `:cka_sensitive` attribute is set to `false`
+    or `:cka_extractable` is set to `true`.
+    """
+    @spec rsa_private_key_with_sensitive() :: MapSet.t(atom())
+    def rsa_private_key_with_sensitive do
+      MapSet.union(rsa_private_key(),
+        MapSet.new([
+          :cka_private_exponent,
+          :cka_prime_1,
+          :cka_prime_2,
+          :cka_coefficient,
+          :cka_exponent_1,
+          :cka_exponent_2
+        ]))
+    end
+
   end
 
   @typedoc """
@@ -245,6 +318,14 @@ defmodule P11ex.Lib do
       | {non_neg_integer()}
       | {atom(), map()}
       | {non_neg_integer(), map()}
+
+  @type attribute ::
+    {atom()}
+    | {atom(), binary()}
+    | {atom(), integer()}
+    | {atom(), boolean()}
+
+  @type attributes :: list(attribute())
 
   @on_load :load_nifs
 
@@ -346,20 +427,41 @@ defmodule P11ex.Lib do
     end
   end
 
-  defp process_attributes(attributes) when is_list(attributes) do
-    if Enum.all?(attributes, fn
-          {key, _value} when is_atom(key) -> true
-           _ -> false
-       end) do
-#        updated_tuples = Enum.map(attributes, fn
-#          {key, value} when is_binary(value) -> {key, String.to_charlist(value)}
-#          {key, value} -> {key, value}
-#        end)
+  @known_bigint_attributes MapSet.new([
+    :cka_modulus,
+    :cka_prime1,
+    :cka_prime2,
+    :cka_exponent_1,
+    :cka_exponent_2,
+    :cka_coefficient,
+    :cka_public_exponent])
 
-        {:ok, attributes}
-    else
-      {:error, :invalid_attributes_tuples}
+  defp encode_bigint_attribute(attrib) do
+    case attrib do
+      {name, value} when is_atom(name) and is_integer(value) ->
+        {:ok, {name, :binary.encode_unsigned(value)}}
+      err ->
+        {:error, :invalid_attribute_tuple, attrib}
     end
+  end
+
+  defp pre_convert_attribute({name, _} = attrib) do
+    if MapSet.member?(@known_bigint_attributes, name) do
+      encode_bigint_attribute(attrib)
+    else
+      {:ok, attrib}
+    end
+  end
+
+  defp process_attributes(attributes) when is_list(attributes) do
+    attributes
+    |> Enum.map(fn a -> pre_convert_attribute(a) end)
+    |> Enum.reduce({:ok, []}, fn a, {ok, acc} ->
+      case a do
+        {:ok, {n, value}} -> {:ok, [{n, value} | acc]}
+        {:error, err} -> {:error, err}
+      end
+    end)
   end
 
   def find_objects(%SessionHandle{} = session, attributes, max_hits)
@@ -374,8 +476,42 @@ defmodule P11ex.Lib do
       when is_list(key_template) do
     Logger.debug("generate_key: session=#{inspect(session)}, mechanism=#{inspect(mechanism)}, key_template=#{inspect(key_template)}")
     with {:ok, attributes} <- process_attributes(key_template) do
-      n_generate_key(session.module.ref, session.handle, mechanism, attributes)
+      case n_generate_key(session.module.ref, session.handle, mechanism, attributes) do
+        {:ok, handle} -> {:ok, ObjectHandle.new(session, handle)}
+        error -> error
+      end
     end
+  end
+
+
+  defp post_convert_attributes(attribute_map) do
+    attribute_map
+    |> Enum.map(fn {name, value} ->
+      if MapSet.member?(@known_bigint_attributes, name) do
+        {name, :binary.decode_unsigned(value)}
+      else
+        {name, value}
+      end
+    end)
+    |> Map.new()
+  end
+
+  @doc """
+  This is a helper function that parses the list of attributes returned by `n_get_object_attributes/4`
+  and returns a map of valid attributes and a list of errors.
+  """
+  @spec split_attributes(list(attribute())) :: {map(), list()}
+  defp split_attributes(lst) do
+    Enum.reduce(lst, {Map.new(), []}, fn a, {ok_set, err_set}  ->
+      case a do
+        {:ok, {name, value}} when is_list(value) ->
+          {Map.put(ok_set, name, to_string(value)), err_set}
+        {:ok, {name, value}} ->
+          {Map.put(ok_set, name, value), err_set}
+        {:error, reason, id} ->
+          {ok_set, [{reason, id} | err_set]}
+      end
+    end)
   end
 
   def get_object_attributes(%SessionHandle{} = session, %ObjectHandle{} = object, attribute_set) do
@@ -385,18 +521,8 @@ defmodule P11ex.Lib do
       res = n_get_object_attributes(session.module.ref, session.handle, object.handle, attribute_names)
       case res do
         {:ok, lst} ->
-          {ok_set, fail_list} =
-            Enum.reduce(lst, {Map.new(), []}, fn a, {ok_set, err_set}  ->
-              case a do
-                {:ok, {name, value}} when is_list(value) ->
-                  {Map.put(ok_set, name, to_string(value)), err_set}
-                {:ok, {name, value}} ->
-                  {Map.put(ok_set, name, value), err_set}
-                {:error, reason, id} ->
-                  {ok_set, [{reason, id} | err_set]}
-              end
-            end)
-          {:ok, ok_set, fail_list}
+          {ok_set, fail_list} = split_attributes(lst)
+          {:ok, post_convert_attributes(ok_set), fail_list}
         error -> error
       end
     else
@@ -569,6 +695,20 @@ defmodule P11ex.Lib do
         max_length: max_length,
         flags: P11ex.Flags.to_atoms(:mechanism, flags)
       }}
+    end
+  end
+
+  @spec generate_key_pair(SessionHandle.t(), mechanism_instance(), attributes(), attributes())
+    :: {:ok, {ObjectHandle.t(), ObjectHandle.t()}} | {:error, atom()} | {:error, atom(), any()}
+  def generate_key_pair(session, mechanism, pub_key_template, priv_key_template) do
+    with {:ok, pubk_attribs} <- process_attributes(pub_key_template),
+         {:ok, prvk_attribs} <- process_attributes(priv_key_template) do
+      case n_generate_key_pair(session.module.ref, session.handle,
+                               mechanism, pubk_attribs, prvk_attribs) do
+        {:ok, {pubk_handle, prvk_handle}} ->
+          {:ok, {ObjectHandle.new(session, pubk_handle), ObjectHandle.new(session, prvk_handle)}}
+        error -> error
+      end
     end
   end
 
@@ -766,6 +906,12 @@ defmodule P11ex.Lib do
   defp n_digest(_p11_module, _session, _data) do
     # This function will be implemented in NIF
     raise "NIF digest/2 not implemented"
+  end
+
+  defp n_generate_key_pair(_p11_module, _session, _mechanism,
+    _pub_key_template, _priv_key_template) do
+    # This function will be implemented in NIF
+    raise "NIF generate_key_pair/5 not implemented"
   end
 
 end

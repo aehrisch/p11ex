@@ -219,6 +219,8 @@ static ERL_NIF_TERM digest_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
 static ERL_NIF_TERM digest_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM digest(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 
+static ERL_NIF_TERM generate_key_pair(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+
 static ERL_NIF_TERM destroy_object(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM list_mechanisms(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM mechanism_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
@@ -263,6 +265,7 @@ static ERL_NIF_TERM key_type_to_term(ErlNifEnv* env, CK_KEY_TYPE key_type);
 
 static const attribute_info_t attribute_info[] = {
   {CKA_AC_ISSUER,   "cka_ac_issuer",   P11_ATTR_TYPE_BYTES},
+  {CKA_ALWAYS_AUTHENTICATE, "cka_always_authenticate", P11_ATTR_TYPE_BOOL},
   {CKA_ALWAYS_SENSITIVE, "cka_always_sensitive", P11_ATTR_TYPE_BOOL},
   {CKA_APPLICATION, "cka_application", P11_ATTR_TYPE_STRING},
   {CKA_ATTR_TYPES,  "cka_attr_types",  P11_ATTR_TYPE_BYTES},
@@ -306,13 +309,14 @@ static const attribute_info_t attribute_info[] = {
   {CKA_PRIME,       "cka_prime",       P11_ATTR_TYPE_BIGINT},
   {CKA_PRIVATE_EXPONENT, "cka_private_exponent", P11_ATTR_TYPE_BIGINT},
   {CKA_PRIVATE,     "cka_private",     P11_ATTR_TYPE_BOOL},
-  {CKA_PUBLIC_EXPONENT, "cka_public_exponent", P11_ATTR_TYPE_BIGINT},
+  {CKA_PUBLIC_EXPONENT, "cka_public_exponent", P11_ATTR_TYPE_BYTES},
   {CKA_PUBLIC_KEY_INFO, "cka_public_key_info", P11_ATTR_TYPE_BYTES},
   {CKA_SENSITIVE,   "cka_sensitive",   P11_ATTR_TYPE_BOOL},
   {CKA_SERIAL_NUMBER, "cka_serial_number", P11_ATTR_TYPE_BYTES},
   {CKA_SIGN_RECOVER, "cka_sign_recover", P11_ATTR_TYPE_BOOL},
   {CKA_SIGN,        "cka_sign",        P11_ATTR_TYPE_BOOL},
   {CKA_START_DATE,  "cka_start_date",  P11_ATTR_TYPE_DATE},
+  {CKA_SUBJECT,     "cka_subject",     P11_ATTR_TYPE_BYTES},
   {CKA_SUBPRIME_BITS, "cka_subprime_bits", P11_ATTR_TYPE_ULONG},
   {CKA_SUBPRIME,    "cka_subprime",    P11_ATTR_TYPE_BIGINT},
   {CKA_TOKEN,       "cka_token",       P11_ATTR_TYPE_BOOL},
@@ -606,7 +610,8 @@ static ErlNifFunc nif_funcs[] = {
   {"n_digest_init", 3, digest_init},
   {"n_digest_update", 3, digest_update},
   {"n_digest_final", 2, digest_final},
-  {"n_digest", 3, digest}
+  {"n_digest", 3, digest},
+  {"n_generate_key_pair", 5, generate_key_pair}
 };
 
 /* Implementation of load_module/1: Load a PKCS#11 module, get the function list, 
@@ -1605,7 +1610,7 @@ static ERL_NIF_TERM term_to_attributes(
     } else {
       all_values_copied = 1;
     }
-    print_buffer(value_buffer, MIN(value_buffer_size, value_index));
+    P11_debug_buffer(value_buffer, MIN(value_buffer_size, value_index));
   }
 
   *out_attribute_list = attributes;
@@ -1703,6 +1708,7 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
     case CKM_AES_KEY_WRAP:
     case CKM_AES_KEY_WRAP_PAD:
     case CKM_AES_MAC:
+    case CKM_RSA_PKCS_KEY_PAIR_GEN:
       /* This mechanism has no parameters */
       return enif_make_atom(env, "ok");
       break;
@@ -2171,6 +2177,7 @@ static ERL_NIF_TERM attribute_to_term(ErlNifEnv* env, CK_ATTRIBUTE* attribute) {
         enif_make_atom(env, "ok"), 
         enif_make_tuple2(env, attr_name, value_term));
 
+    case P11_ATTR_TYPE_BIGINT:
     case P11_ATTR_TYPE_BYTES:
       P11_debug("attribute_to_term: allocating binary for %lu bytes", attribute->ulValueLen);
       if (!enif_alloc_binary(attribute->ulValueLen, &binary)) {
@@ -3266,6 +3273,128 @@ static ERL_NIF_TERM digest_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 
   return enif_make_tuple2(env, enif_make_atom(env, "ok"), data_out_term);
 }
+
+/*
+         ______              __ __           ____        _     
+        / ____/__  ____     / //_/__  __  __/ __ \____ _(_)____
+       / / __/ _ \/ __ \   / ,< / _ \/ / / / /_/ / __ `/ / ___/
+      / /_/ /  __/ / / /  / /| /  __/ /_/ / ____/ /_/ / / /    
+      \____/\___/_/ /_/  /_/ |_\___/\__, /_/    \__,_/_/_/     
+                                   /____/                      
+*/
+
+static ERL_NIF_TERM generate_key_pair(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  CK_MECHANISM mechanism = {0};
+  ERL_NIF_TERM mech_conv_res, pub_key_conv_res, priv_key_conv_res;
+  CK_ATTRIBUTE_PTR pub_key_attributes = NULL;
+  CK_ULONG pub_key_attributes_len = 0;
+  CK_ATTRIBUTE_PTR priv_key_attributes = NULL;
+  CK_ULONG priv_key_attributes_len = 0;
+  CK_OBJECT_HANDLE pub_key_handle = 0;
+  CK_OBJECT_HANDLE priv_key_handle = 0;
+  ERL_NIF_TERM handle_tuple;
+
+  P11_debug("generate_key_pair: enter");
+  REQUIRE_ARGS(env, argc, 5);
+
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[1]: session handle */
+  ULONG_ARG(env, argv[1], session_handle);
+
+  /* argv[2]: mechanism type */
+  mech_conv_res = term_to_mechanism(env, argv[2], &mechanism);
+  if (enif_compare(mech_conv_res, enif_make_atom(env, "ok")) != 0) {
+    return mech_conv_res;
+  }
+  P11_debug("generate_key_pair: converted mechanism %p", &mechanism);
+  P11_debug_mechanism(&mechanism);
+  
+  /* argv[3]: public key template */
+  if (!enif_is_list(env, argv[3])) {
+    if (mechanism.pParameter != NULL) {
+      free(mechanism.pParameter);
+    }
+    return enif_make_badarg(env);
+  }
+
+  /* argv[4]: private key template */
+  if (!enif_is_list(env, argv[4])) {
+    if (mechanism.pParameter != NULL) {
+      free(mechanism.pParameter);
+    }
+    return enif_make_badarg(env);
+  }
+
+  /* convert public key template */
+  pub_key_conv_res = term_to_attributes(env, argv[3], &pub_key_attributes, &pub_key_attributes_len);
+  if (enif_compare(pub_key_conv_res, enif_make_atom(env, "ok")) != 0) {
+    if (mechanism.pParameter != NULL) {
+      free(mechanism.pParameter);
+    }
+    return pub_key_conv_res;
+  }
+
+  /* convert private key template */
+  priv_key_conv_res = term_to_attributes(env, argv[4], &priv_key_attributes, &priv_key_attributes_len);
+  if (enif_compare(priv_key_conv_res, enif_make_atom(env, "ok")) != 0) {
+    if (mechanism.pParameter != NULL) {
+      free(mechanism.pParameter);
+    }
+    if (pub_key_attributes != NULL) {
+      free(pub_key_attributes[0].pValue);
+      free(pub_key_attributes);
+    }
+    return priv_key_conv_res;
+  }
+
+  /* Now, actually generate the key pair */
+  P11_call(rv, p11_module, C_GenerateKeyPair, session_handle, &mechanism,
+     pub_key_attributes, pub_key_attributes_len, 
+     priv_key_attributes, priv_key_attributes_len,
+     &pub_key_handle, &priv_key_handle);
+  if (rv != CKR_OK) {
+    if (pub_key_attributes != NULL) {
+      free(pub_key_attributes[0].pValue);
+      free(pub_key_attributes);
+    }
+    if (priv_key_attributes != NULL) {
+      free(priv_key_attributes[0].pValue);  
+      free(priv_key_attributes);
+    }
+    if (mechanism.pParameter != NULL) {
+      free(mechanism.pParameter);
+    }
+    return P11_error(env, "C_GenerateKeyPair", rv);
+  }
+
+  handle_tuple = 
+    enif_make_tuple2(env, 
+      enif_make_ulong(env, pub_key_handle),
+      enif_make_ulong(env, priv_key_handle));
+
+  if (mechanism.pParameter != NULL) {
+    free(mechanism.pParameter);
+  }
+  if (pub_key_attributes != NULL) {
+    free(pub_key_attributes[0].pValue);
+    free(pub_key_attributes);
+  }
+  if (priv_key_attributes != NULL) {
+    free(priv_key_attributes[0].pValue);
+    free(priv_key_attributes);
+  }
+  return enif_make_tuple2(env, enif_make_atom(env, "ok"), handle_tuple);
+}
+
+
 
 
 /*

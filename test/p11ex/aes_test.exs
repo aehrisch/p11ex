@@ -25,6 +25,9 @@ defmodule P11ExTest.AesKeygen do
         {:cka_id, key_id}
       ])
 
+    assert %Lib.ObjectHandle{} = key
+    assert is_integer(key.handle) and key.handle > 0
+    
     {:ok, [object | []]} = Session.find_objects(context.session_pid, [{:cka_id, key_id}], 5)
     {:ok, attribs, []} = Session.read_object(context.session_pid, object, :cko_secret_key)
 
