@@ -287,6 +287,14 @@ defmodule P11ex.Session do
     GenServer.call(server, {:generate_random, len})
   end
 
+  @spec generate_key_pair(server :: GenServer.server(), Lib.mechanism_instance(), Lib.attributes(), Lib.attributes())
+    :: {:ok, {ObjectHandle.t(), ObjectHandle.t()}} | {:error, atom()} | {:error, atom(), any()}
+  def generate_key_pair(server \\ __MODULE__, mechanism,
+      pub_key_template, priv_key_template)
+      when is_tuple(mechanism) do
+    GenServer.call(server, {:generate_key_pair, mechanism, pub_key_template, priv_key_template})
+  end
+
   ###
   ### Implementation of callbacks
 
@@ -346,8 +354,11 @@ defmodule P11ex.Session do
         [] -> ObjectAttributes.common()
         nil -> ObjectAttributes.common()
         :cko_key -> ObjectAttributes.key()
+        :cko_public_key -> ObjectAttributes.public_key()
+        :cko_private_key -> ObjectAttributes.private_key()
         :cko_secret_key -> ObjectAttributes.secret_key()
         [h | t] -> MapSet.new([h | t])
+        ms when is_struct(ms, MapSet) -> ms
         _ -> ObjectAttributes.storage()
       end
     Logger.debug("initial attribute fetch set: #{inspect(fetch_set)}")
@@ -359,8 +370,8 @@ defmodule P11ex.Session do
   @impl true
   def handle_call({:generate_key, mechanism, key_template}, _from, state) do
     case Lib.generate_key(state.session, mechanism, key_template) do
-      {:ok, object_handle} ->
-        {:reply, {:ok, ObjectHandle.new(state.session, object_handle)}, state}
+      {:ok, obj} ->
+        {:reply, {:ok, obj}, state}
       err ->
         {:reply, err, state}
     end
@@ -514,6 +525,15 @@ defmodule P11ex.Session do
   def handle_call({:destroy_object, %ObjectHandle{} = object}, _from, state) do
     res = Lib.destroy_object(state.session, object)
     {:reply, res, state}
+  end
+
+  @impl true
+  def handle_call({:generate_key_pair, mechanism, pub_key_template, priv_key_template}, _from, state)
+      when is_tuple(mechanism) do
+    case Lib.generate_key_pair(state.session, mechanism, pub_key_template, priv_key_template) do
+      {:ok, pub_key_handle, priv_key_handle} -> {:reply, {:ok, pub_key_handle, priv_key_handle}, state}
+      err -> {:reply, err, state}
+    end
   end
 
 end
