@@ -214,6 +214,9 @@ static ERL_NIF_TERM sign_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM arg
 static ERL_NIF_TERM sign_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM sign(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 
+static ERL_NIF_TERM verify_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM verify(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+
 static ERL_NIF_TERM digest_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM digest_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM digest_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
@@ -607,6 +610,8 @@ static ErlNifFunc nif_funcs[] = {
   {"n_sign_init", 4, sign_init},
   {"n_sign_update", 3, sign_update},
   {"n_sign_final", 2, sign_final},
+  {"n_verify_init", 4, verify_init},
+  {"n_verify", 4, verify},
   {"n_digest_init", 3, digest_init},
   {"n_digest_update", 3, digest_update},
   {"n_digest_final", 2, digest_final},
@@ -1950,7 +1955,85 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
       break;
     }
 
+    case CKM_RSA_PKCS_PSS: {
+      ERL_NIF_TERM salt_len_term, hash_alg_term, mgf_hash_alg_term;
+      CK_ULONG salt_len = 32;
+      CK_RSA_PKCS_PSS_PARAMS *params = NULL;
 
+      if (!enif_get_map_value(env, map, enif_make_atom(env, "salt_len"), &salt_len_term)
+          || !enif_get_ulong(env, salt_len_term, &salt_len) 
+          || salt_len < 16 
+          || salt_len > 256) {
+        return enif_make_tuple3(env, 
+          enif_make_atom(env, "error"), 
+          enif_make_atom(env, "invalid_salt_len_parameter"), salt_len_term);
+      }
+
+      params = (CK_RSA_PKCS_PSS_PARAMS*) calloc(1, sizeof(CK_RSA_PKCS_PSS_PARAMS));
+      if (params == NULL) {
+        return enif_make_tuple2(env, 
+          enif_make_atom(env, "error"), 
+          enif_make_atom(env, "memory_allocation_failed"));
+      }
+
+      if (!enif_get_map_value(env, map, enif_make_atom(env, "hash_alg"), &hash_alg_term)
+          || !enif_is_atom(env, hash_alg_term)) {
+        return enif_make_tuple3(env, 
+          enif_make_atom(env, "error"), 
+          enif_make_atom(env, "invalid_hash_alg_parameter"), hash_alg_term);
+      }
+      params->sLen = salt_len;
+
+      if (hash_alg_term == enif_make_atom(env, "sha")) {
+        params->hashAlg = CKM_SHA_1;
+      } else if (hash_alg_term == enif_make_atom(env, "sha224")) {
+        params->hashAlg = CKM_SHA224;
+      } else if (hash_alg_term == enif_make_atom(env, "sha256")) {
+        params->hashAlg = CKM_SHA256;
+      } else if (hash_alg_term == enif_make_atom(env, "sha384")) {  
+        params->hashAlg = CKM_SHA384;
+      } else if (hash_alg_term == enif_make_atom(env, "sha512")) {
+        params->hashAlg = CKM_SHA512;
+      } else {
+        return enif_make_tuple3(env, 
+          enif_make_atom(env, "error"), 
+          enif_make_atom(env, "invalid_hash_alg_parameter"), hash_alg_term);
+      }
+      
+      if (!enif_get_map_value(env, map, enif_make_atom(env, "mgf_hash_alg"), &mgf_hash_alg_term)
+          || !enif_is_atom(env, mgf_hash_alg_term)) {
+        return enif_make_tuple3(env, 
+          enif_make_atom(env, "error"), 
+          enif_make_atom(env, "invalid_mgf_hash_alg_parameter"), mgf_hash_alg_term);
+      }
+
+      if (mgf_hash_alg_term == enif_make_atom(env, "sha")) {
+        params->mgf = CKG_MGF1_SHA1;
+      } else if (mgf_hash_alg_term == enif_make_atom(env, "sha224")) {
+        params->mgf = CKG_MGF1_SHA224;
+      } else if (mgf_hash_alg_term == enif_make_atom(env, "sha256")) {
+        params->mgf = CKG_MGF1_SHA256;
+      } else if (mgf_hash_alg_term == enif_make_atom(env, "sha384")) {
+        params->mgf = CKG_MGF1_SHA384;
+      } else if (mgf_hash_alg_term == enif_make_atom(env, "sha512")) {
+        params->mgf = CKG_MGF1_SHA512;
+      } else {
+        return enif_make_tuple3(env, 
+          enif_make_atom(env, "error"), 
+          enif_make_atom(env, "invalid_mgf_hash_alg_parameter"), mgf_hash_alg_term);
+      }
+
+      P11_debug("set_mechanism_parameters_from_term: CKM_RSA_PKCS_PSS params=%p", params);
+      P11_debug("set_mechanism_parameters_from_term: CKM_RSA_PKCS_PSS params->sLen=%lu", params->sLen);
+      P11_debug("set_mechanism_parameters_from_term: CKM_RSA_PKCS_PSS params->hashAlg=0x%lx", params->hashAlg);
+      P11_debug("set_mechanism_parameters_from_term: CKM_RSA_PKCS_PSS params->mgf=0x%lx", params->mgf);
+
+      mechanism->pParameter = params;
+      mechanism->ulParameterLen = sizeof(CK_RSA_PKCS_PSS_PARAMS);
+
+      break;
+    }
+    
     default:
       return enif_make_tuple2(
         env,
@@ -3071,6 +3154,101 @@ static ERL_NIF_TERM sign_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
 }  
 
 /*
+         _    __          _ ____     
+        | |  / /__  _____(_) __/_  __
+        | | / / _ \/ ___/ / /_/ / / /
+        | |/ /  __/ /  / / __/ /_/ / 
+        |___/\___/_/  /_/_/  \__, /  
+                            /____/   
+*/
+
+static ERL_NIF_TERM verify_init(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  CK_OBJECT_HANDLE key_handle = 0;
+  CK_MECHANISM mechanism = {0};
+  ERL_NIF_TERM mech_conversion_result;
+
+  P11_debug("verify_init: enter");
+  REQUIRE_ARGS(env, argc, 4);
+
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[1]: session handle */
+  ULONG_ARG(env, argv[1], session_handle);
+
+  /* argv[3]: key handle */
+  ULONG_ARG(env, argv[3], key_handle);
+
+  /* argv[2]: mechanism type */
+  mech_conversion_result = term_to_mechanism(env, argv[2], &mechanism);
+  P11_debug("sign_init: mechanism conversion result: %T", mech_conversion_result);
+  if (enif_compare(mech_conversion_result, enif_make_atom(env, "ok")) != 0) {
+    return mech_conversion_result;
+  }
+  P11_debug("sign_init: converted mechanism %p", &mechanism);
+  P11_debug_mechanism(&mechanism);
+
+  P11_call(rv, p11_module, C_VerifyInit, session_handle, &mechanism, key_handle);
+  if (rv != CKR_OK) {
+    if (mechanism.pParameter != NULL) {
+      free(mechanism.pParameter);
+    }
+    return P11_error(env, "C_VerifyInit", rv);
+  }
+
+  if (mechanism.pParameter != NULL) {
+    free(mechanism.pParameter);
+  }
+
+  return enif_make_atom(env, "ok");
+}
+  
+static ERL_NIF_TERM verify(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  ErlNifBinary data = {0}, signature = {0};
+  
+  P11_debug("verify: enter");
+  REQUIRE_ARGS(env, argc, 4);
+
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[1]: session handle */
+  ULONG_ARG(env, argv[1], session_handle);
+
+  /* argv[2]: data */
+  if (!enif_inspect_binary(env, argv[2], &data)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[3]: signature */
+  if (!enif_inspect_binary(env, argv[3], &signature)) {
+    return enif_make_badarg(env);
+  }
+
+  P11_debug("verify: calling C_Verify data=%p len=%lu sig=%p len=%lu", 
+    data.data, data.size, signature.data, signature.size);
+  P11_call(rv, p11_module, C_Verify, session_handle, data.data, data.size, signature.data, signature.size);
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_Verify", rv);
+  }
+
+  return enif_make_atom(env, "ok");
+}
+
+
+/*
          ____  _                 __ 
         / __ \(_)___ ____  _____/ /_
        / / / / / __ `/ _ \/ ___/ __/
@@ -3547,7 +3725,7 @@ static int mechanism_type_from_term(
 
     for (const mechanism_map_t *m = mechanism_map; m->name != NULL; m++) {
       if (strcmp(atom, m->name) == 0) {
-        P11_debug("mechanism_type_from_term: mapped %s to 0x%ul", atom, m->value);
+        P11_debug("mechanism_type_from_term: mapped %s to 0x%lx", atom, m->value);
         *out_mechanism_type = m->value;
         return 1;
       }

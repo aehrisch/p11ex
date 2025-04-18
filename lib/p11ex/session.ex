@@ -220,6 +220,20 @@ defmodule P11ex.Session do
     GenServer.call(server, :sign_final)
   end
 
+  @spec verify_init(server :: GenServer.server(), Lib.mechanism_instance(), ObjectHandle.t())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  def verify_init(server \\ __MODULE__, mechanism, %ObjectHandle{} = key)
+      when is_tuple(mechanism) do
+    GenServer.call(server, {:verify_init, mechanism, key})
+  end
+
+  @spec verify(server :: GenServer.server(), binary(), binary())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  def verify(server \\ __MODULE__, data, signature)
+      when is_binary(data) and is_binary(signature) do
+    GenServer.call(server, {:verify, data, signature})
+  end
+
   @doc """
   Initialize a digest operation involving the specified `mechanism`. The session's
   current operation is set to `:digest`. This operation can be finalized by calling
@@ -471,6 +485,24 @@ defmodule P11ex.Session do
   def handle_call(:sign_final, _from, state) do
     case Lib.sign_final(state.session) do
       {:ok, sig} -> {:reply, {:ok, sig}, %{state | current_op: nil}}
+      err -> {:reply, err, %{state | current_op: nil}}
+    end
+  end
+
+  @impl true
+  def handle_call({:verify_init, mechanism, %ObjectHandle{} = key}, _from, state)
+      when is_tuple(mechanism) do
+    case Lib.verify_init(state.session, mechanism, key) do
+      :ok -> {:reply, :ok, %{state | current_op: :verify}}
+      err -> {:reply, err, %{state | current_op: nil}}
+    end
+  end
+
+  @impl true
+  def handle_call({:verify, data, signature}, _from, state)
+      when is_binary(data) and is_binary(signature) do
+    case Lib.verify(state.session, data, signature) do
+      :ok -> {:reply, :ok, %{state | current_op: nil}}
       err -> {:reply, err, %{state | current_op: nil}}
     end
   end

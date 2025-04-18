@@ -627,6 +627,20 @@ defmodule P11ex.Lib do
     n_sign(session.module.ref, session.handle, data)
   end
 
+  @spec verify_init(SessionHandle.t(), mechanism_instance(), ObjectHandle.t())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  def verify_init(%SessionHandle{} = session, mechanism, %ObjectHandle{} = key)
+        when is_tuple(mechanism) do
+    n_verify_init(session.module.ref, session.handle, mechanism, key.handle)
+  end
+
+  @spec verify(SessionHandle.t(), binary(), binary())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  def verify(%SessionHandle{} = session, data, signature)
+      when is_binary(data) and is_binary(signature) do
+    n_verify(session.module.ref, session.handle, data, signature)
+  end
+
   @doc """
   Initialize a digest operation. The session's current operation is set to
   `:digest`. Use `digest_update/2` to provide data to the digest operation.
@@ -886,6 +900,20 @@ defmodule P11ex.Lib do
   defp n_sign_final(_p11_module, _session) do
     # This function will be implemented in NIF
     raise "NIF sign_final/2 not implemented"
+  end
+
+  @spec n_verify_init(reference(), non_neg_integer(), tuple(), non_neg_integer())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  defp n_verify_init(_p11_module, _session, _mechanism, _key) do
+    # This function will be implemented in NIF
+    raise "NIF verify_init/4 not implemented"
+  end
+
+  @spec n_verify(reference(), non_neg_integer(), binary(), binary())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
+  defp n_verify(_p11_module, _session, _data, _signature) do
+    # This function will be implemented in NIF
+    raise "NIF verify/4 not implemented"
   end
 
   defp n_digest_init(_p11_module, _session, _mechanism) do
