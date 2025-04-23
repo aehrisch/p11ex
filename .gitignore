@@ -17,3 +17,5 @@ priv/
 token/
 softhsm2.conf
 softhsm-conf.path
+test_apps/*/_build
+test_apps/*/deps
