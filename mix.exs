@@ -32,6 +32,8 @@ defmodule P11ex.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:poolboy, "~> 1.5.2"},
+
       {:elixir_make, "~> 0.7", runtime: false},
 
       {:junit_formatter, "~> 3.3", only: :test},
@@ -40,4 +42,6 @@ defmodule P11ex.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
+
+
 end
