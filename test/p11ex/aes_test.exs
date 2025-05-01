@@ -1,5 +1,6 @@
 defmodule P11ExTest.AesKeygen do
 
+
   use ExUnit.Case, async: false
 
   alias P11ex.Lib, as: Lib
@@ -9,6 +10,9 @@ defmodule P11ExTest.AesKeygen do
   setup_all do
     P11ex.TestHelper.setup_session()
   end
+
+  @moduletag :aes
+  @moduletag :softhsm
 
   # This test generates an AES key and computes the key check value (KCV). The KCV
   # computed must match the key check value stored in the attribute (cka_check_value).
@@ -27,7 +31,7 @@ defmodule P11ExTest.AesKeygen do
 
     assert %Lib.ObjectHandle{} = key
     assert is_integer(key.handle) and key.handle > 0
-    
+
     {:ok, [object | []]} = Session.find_objects(context.session_pid, [{:cka_id, key_id}], 5)
     {:ok, attribs, []} = Session.read_object(context.session_pid, object, :cko_secret_key)
 
@@ -317,6 +321,53 @@ defmodule P11ExTest.AesKeygen do
       Session.encrypt(context.session_pid,
         {:ckm_aes_ctr, %{iv: iv_valid, counter_bits: 144}},
         key, data)
+
+    :ok = Session.destroy_object(context.session_pid, key)
+  end
+
+  @tag :aes_gcm
+  test "aes_gcm encrypt/decrypt, one call", context do
+    key_id = :crypto.strong_rand_bytes(16)
+    assert {:ok, key} =
+      Session.generate_key(context.session_pid,
+      {:ckm_aes_key_gen},
+      [
+        {:cka_token, false},
+        {:cka_label, "test_key"},
+        {:cka_value_len, 16},
+        {:cka_id, key_id}
+      ])
+
+    # Use a 12-byte IV which is standard for AES-GCM
+    iv = :crypto.strong_rand_bytes(12)
+
+    data_size = [5, 16, 32, 64, 128]
+    aad = [0, 8, 16, 50, 128]
+      |> Enum.map(fn aad_size -> :crypto.strong_rand_bytes(aad_size) end)
+
+    aad ++ [:not_set]
+    |> Enum.each(fn aad ->
+      data_size
+      |> Enum.each(fn data_size ->
+        data = :crypto.strong_rand_bytes(data_size)
+        params = if aad == :not_set do
+          %{iv: iv, tag_bits: 128}
+        else
+         %{iv: iv, aad: aad, tag_bits: 128}
+       end
+
+        # Then encrypt the data
+        assert {:ok, encrypted} = Session.encrypt(context.session_pid, {:ckm_aes_gcm, params}, key, data)
+
+        # Verify the encrypted data is not empty and has the expected size
+        assert is_binary(encrypted)
+        assert byte_size(encrypted) > 0
+
+        # Try to decrypt
+        assert {:ok, decrypted} = Session.decrypt(context.session_pid, {:ckm_aes_gcm, params}, key, encrypted)
+        assert data == decrypted
+      end)
+    end)
 
     :ok = Session.destroy_object(context.session_pid, key)
   end

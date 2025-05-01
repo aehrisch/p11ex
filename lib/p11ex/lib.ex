@@ -142,14 +142,18 @@ defmodule P11ex.Lib do
 
   defmodule ObjectHandle do
     @moduledoc """
-    Represents a PKCS#11 object. An object stored in the token. This can be a key,
-    a certificate, a secret key, etc.
+    Represents a PKCS#11 object. This can be a key, a certificate, a secret key, etc. Note
+    that the object handle may be only valid in the context of the session that created it.
+    For example, a session key (`:cka_token` is `false`) is only visible and usable within the
+    context of the session that generates it. Other handles may be visible and usable over multiple
+    sessions, such as handles to token objects.
     """
 
     @typedoc """
-    The PKCS#11 session that the object belongs to.
+    The PKCS#11 session that the object belongs to. May be `nil` if the is not known
+    which session the object belongs to.
     """
-    @type session :: P11ex.Lib.SessionHandle.t()
+    @type session :: P11ex.Lib.SessionHandle.t() | nil
 
     @typedoc """
     The handle of the object which is unsigned integer identifying the object.
@@ -167,12 +171,20 @@ defmodule P11ex.Lib do
     defstruct [:session, :handle]
 
     @doc """
-    Create a new object handle.
+    Create a new object handle and associate it with a session.
     """
     @spec new(session(), handle()) :: t()
     def new(%SessionHandle{} = session, handle)
         when is_integer(handle) and handle >= 0 do
       %__MODULE__{session: session, handle: handle}
+    end
+
+    @doc """
+    Create a new object handle and do not associate it with a session.
+    """
+    @spec new(handle()) :: t()
+    def new(handle) when is_integer(handle) and handle >= 0 do
+      %__MODULE__{session: nil, handle: handle}
     end
 
     def new(_, _) do
@@ -308,10 +320,13 @@ defmodule P11ex.Lib do
 
   Example:
   ```elixir
-  {:ckm_aes_cbc, %{iv: iv}
+  {:ckm_aes_cbc, %{iv: iv}}
   ```
   This is AES in CBC mode with the initialization vector `iv`
   (a binary of 16 bytes).
+
+  See `P11ex.Session.encrypt_init/3` for examples on how to set the
+  parameters for the various encryption mechanisms.
   """
   @type mechanism_instance ::
       {atom()}

@@ -88,12 +88,11 @@ defmodule P11ex.Session do
   end
 
   @doc """
-  Login to the session. The `user_type` can be `:user` or `:so`.
-  The `pin` is the PIN of the user. The `P11ex.Session` module will check
-  if a login already succeeded for the session and skip the login if so. This
-  avoids `:cka_already_logged_in` errors.
+  Log in to the session. The `user_type` must be either `:user` or `:so`. Provide the user's pin
+  for authentication. The `P11ex.Session` module checks if the session is already logged in and
+  skips the login if so, preventing `:cka_already_logged_in` errors.
   """
-  @spec login(server :: GenServer.server(), user_type :: atom(), pin :: String.t()) :: :ok | {:error, atom()}
+  @spec login(server :: GenServer.server(), user_type :: {:user, :so}, pin :: String.t()) :: :ok | {:error, atom()}
   def login(server \\ __MODULE__, user_type, pin) do
     GenServer.call(server, {:login, user_type, pin})
   end
@@ -130,6 +129,19 @@ defmodule P11ex.Session do
     GenServer.call(server, {:find_objects, attributes, max_hits})
   end
 
+  @doc """
+  Read the attributes of the object identified by object handle `object`. The `type_hint`
+  is an optional and can be used to specify the attributes to read. The default is to read
+  the common attributes (e.g. `:cka_class`, `:cka_id`). See `P11ex.Lib.ObjectAttributes`
+  for commonly used attribute sets.
+
+  The function returns a map of the successfully read attributes. The attributes that
+  could not be read (but were requested through the `type_hint`) are returned as the
+  second element of the tuple. Reasons for not retrieving the attributes are that the
+  attributes are not set or are sensitive.
+  """
+  @spec read_object(server :: GenServer.server(), object :: ObjectHandle.t(), type_hint :: [atom()] | nil)
+    :: {:ok, map(), [atom()]} | {:error, atom()} | {:error, atom(), any()}
   def read_object(server \\ __MODULE__, %ObjectHandle{} = object, type_hint \\ nil) do
     GenServer.call(server, {:read_object, object, type_hint})
   end
@@ -138,6 +150,16 @@ defmodule P11ex.Session do
     GenServer.call(server, {:generate_key, mechanism, key_template})
   end
 
+  @doc """
+  Encrypt data using the specified `mechanism` and `key` in a single call. See
+  `P11ex.Session.encrypt_init/3` on how to select an encryption mechanism and
+  set its parameters.
+  """
+  @spec encrypt(
+    server :: GenServer.server(),
+    mechanism :: Lib.mechanism_instance(),
+    key :: ObjectHandle.t(), data :: binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   def encrypt(server \\ __MODULE__, mechanism, %ObjectHandle{} = key, data) do
     GenServer.call(server, {:encrypt, mechanism, key, data})
   end
@@ -146,6 +168,74 @@ defmodule P11ex.Session do
     GenServer.call(server, {:decrypt, mechanism, key, data})
   end
 
+  @doc """
+  Initialize an encryption operation involving the specified `mechanism` and `key`.
+  Use `P11ex.Session.encrypt_update/2` and `P11ex.Session.encrypt_final/1` to provide
+  the data to encrypt and produce the ciphertext chunks. Note that only one encryption
+  operation can be active at a time for a given session. Consider using `P11ex.Session.encrypt/4`
+  if you want to encrypt data in a single call and the data is not too large.
+
+  The function returns `:ok` if the operation is initialized successfully. That is, no
+  other operations (e.g. decryption, signing, etc.) can be active at the same time.
+
+  ## Setting an encryption mechanism
+
+  Some mechanisms require additional parameters. These parameters are passed as a
+  map. The NIF will translate the map into the appropriate PKCS#11 mechanism structure.
+  If this translation fails (e.g. missing required parameters or wrong type) the operation
+  will return an error of the form `{:error, :invalid_parameter, reason}`.
+
+  The following example show how to do this for common mechanisms:
+
+  ### AES ECB
+
+  No additional parameters are required for AES ECB mode.
+
+  ```elixir
+  :ok = P11ex.Session.encrypt_init(session, {:ckm_aes_ecb}, key)
+  ```
+
+  ### AES CBC and AES OFB
+
+  These mechanisms require an initialization vector (IV). This IV has to be the same length
+  as the block size of the cipher. For AES the block size is 16 bytes and thus the IV
+  has to be 16 bytes long.
+
+  ```elixir
+  iv = :crypto.strong_rand_bytes(16)
+  :ok = P11ex.Session.encrypt_init(session1, {:ckm_aes_cbc, %{iv: iv}}, key)
+  :ok = P11ex.Session.encrypt_init(session2, {:ckm_aes_ofb, %{iv: iv}}, key)
+  ```
+
+  ### AES CTR
+
+  This mechanism requires an initialization vector (IV) and the number of bits in the counter
+  (e.g. 32, 64, 128).
+
+  ```elixir
+  iv = :crypto.strong_rand_bytes(16)
+  params = %{iv: iv, counter_bits: 32}
+  :ok = P11ex.Session.encrypt_init(session, {:ckm_aes_ctr, params}, key)
+  ```
+
+  ### AES GCM
+
+  This mechanism has the following additional parameters:
+  * `:iv` - the initialization vector (IV). Typically, this is 12 bytes long.
+  * `:aad` - the optionl authentication data (AAD)
+  * `:tag_bits` - the number of bits in the authentication tag (typically 128)
+
+  ```elixir
+  iv = :crypto.strong_rand_bytes(12)
+  params = %{iv: iv, tag_bits: 128}
+  :ok = P11ex.Session.encrypt_init(session, {:ckm_aes_gcm, params}, key)
+  ```
+
+  """
+  @spec encrypt_init(
+    server :: GenServer.server(),
+    Lib.mechanism_instance(), ObjectHandle.t())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
   def encrypt_init(server \\ __MODULE__, mechanism, %ObjectHandle{} = key) do
     GenServer.call(server, {:encrypt_init, mechanism, key})
   end

@@ -1735,12 +1735,13 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
           enif_make_atom(env, "invalid_iv_parameter"), iv_term);
       }
 
-      if (enif_get_map_value(env, map, enif_make_atom(env, "aad"), &aad_term)
-          && enif_is_binary(env, aad_term)) {
-        enif_inspect_binary(env, aad_term, &aad_binary);
-      } else {
-        return enif_make_tuple3(env, enif_make_atom(env, "error"), 
-          enif_make_atom(env, "invalid_aad_parameter"), aad_term);
+      if (enif_get_map_value(env, map, enif_make_atom(env, "aad"), &aad_term)) {
+        if (enif_is_binary(env, aad_term)) {
+          enif_inspect_binary(env, aad_term, &aad_binary);
+        } else {
+          return enif_make_tuple3(env, enif_make_atom(env, "error"), 
+            enif_make_atom(env, "invalid_aad_parameter"), aad_term);
+        }
       }
 
       if (!(enif_get_map_value(env, map, enif_make_atom(env, "tag_bits"), &tag_bits_term)
@@ -1749,9 +1750,12 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
                 enif_make_atom(env, "invalid_tag_bits_parameter"), tag_bits_term);
       }
 
+      P11_debug("set_mechanism_parameters_from_term: CKM_AES_GCM iv_len=%x, aad_len=%x",
+        iv_binary.size, aad_binary.size);
       /* The parameters for this mechanism are represented as a struct.
          We allocate memory for the struct, fill it, and set the pointer
-         in the mechanism structure to the struct. */
+         in the mechanism structure to this struct. Directly after the parameter 
+         struct, we allocate memory for the iv and aad. */
       param_size = sizeof(CK_GCM_PARAMS) + iv_binary.size + aad_binary.size;
       params = (CK_GCM_PARAMS*) calloc(1, param_size);
       if (params == NULL) {
@@ -1760,22 +1764,27 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
           enif_make_atom(env, "memory_allocation_failed"));
       }
       
-      iv_ptr = (CK_BYTE_PTR) (params + sizeof(CK_GCM_PARAMS));
+      iv_ptr = (CK_BYTE_PTR) ((CK_BYTE_PTR)params + sizeof(CK_GCM_PARAMS));
       aad_ptr = (CK_BYTE_PTR) (iv_ptr + iv_binary.size);
       memcpy(iv_ptr, iv_binary.data, iv_binary.size);
       memcpy(aad_ptr, aad_binary.data, aad_binary.size);
 
       params->pIv = iv_ptr;
       params->ulIvLen = iv_binary.size;
-      params->ulIvBits = iv_binary.size * 8;
+      params->ulIvBits = 0;
 
       params->pAAD = aad_ptr;
       params->ulAADLen = aad_binary.size;
       params->ulTagBits = tag_bits;
 
       mechanism->pParameter = params;
-      mechanism->ulParameterLen = param_size;
+      mechanism->ulParameterLen = sizeof(CK_GCM_PARAMS);
+      P11_debug("set_mechanism_parameters_from_term: CKM_AES_GCM params=%p, iv_ptr=%p, iv_len=%x, aad_ptr=%p, aad_len=%x, tag_bits=%d", 
+        params, iv_ptr, iv_binary.size, aad_ptr, aad_binary.size, tag_bits);
+      #ifdef P11_DEBUG
+        print_buffer(params, param_size);
       break;
+      #endif
     }
 
     case CKM_AES_OFB:
@@ -2628,8 +2637,7 @@ static ERL_NIF_TERM decrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 
   /* Call the function with NULL as the output buffer, 
      because we want to get the length of the result. */
-  P11_call(rv, p11_module, C_Decrypt, session_handle, 
-    data_in.data, data_in.size, NULL, &res_len1);
+  P11_call(rv, p11_module, C_Decrypt, session_handle, data_in.data, data_in.size, NULL, &res_len1);
   if (rv != CKR_OK) {
     return P11_error(env, "C_Decrypt", rv);
   }
@@ -2646,12 +2654,21 @@ static ERL_NIF_TERM decrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 
   /* Now we do the decryption. */
   res_len2 = data_out.size;
-  P11_call(rv, p11_module, C_Decrypt, session_handle, 
-    data_in.data, data_in.size, data_out.data, &res_len2);
+  P11_call(rv, p11_module, C_Decrypt, session_handle, data_in.data, data_in.size, data_out.data, &res_len2);
   P11_debug("C_Decrypt result length: %lu", res_len2);
   if (rv != CKR_OK) {
     enif_release_binary(&data_out);
     return P11_error(env, "C_Decrypt", rv);
+  }
+
+  if (res_len2 < res_len1) {
+    P11_debug("C_Decrypt result length is less than expected, res_len2: %lu, res_len1: %lu", res_len2, res_len1);
+    if (!enif_realloc_binary(&data_out, res_len2)) {
+      enif_release_binary(&data_out);
+      return enif_make_tuple2(env, 
+        enif_make_atom(env, "error"), 
+        enif_make_atom(env, "memory_reallocation_failed"));
+    }
   }
 
   data_out_term = enif_make_binary(env, &data_out);
