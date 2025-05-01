@@ -222,7 +222,8 @@ defmodule P11ex.Session do
 
   This mechanism has the following additional parameters:
   * `:iv` - the initialization vector (IV). Typically, this is 12 bytes long.
-  * `:aad` - the optionl authentication data (AAD)
+  * `:aad` - the optional authentication data (AAD). Not all PKCS#11 tokens support this parameter.
+    Also, the size of the AAD is limited by the token.
   * `:tag_bits` - the number of bits in the authentication tag (typically 128)
 
   ```elixir
