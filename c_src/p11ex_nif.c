@@ -2528,6 +2528,7 @@ static ERL_NIF_TERM encrypt_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
   /* Call the function with NULL as the output buffer, 
      because we want to get the length of the result. */
   P11_call(rv, p11_module, C_EncryptFinal, session_handle, NULL, &expected_res_len);
+  P11_debug("C_EncryptFinal expected result length: %lu", expected_res_len);
 
   if (!enif_alloc_binary(expected_res_len, &data_out)) {
     return enif_make_tuple2(env, 
@@ -2536,11 +2537,13 @@ static ERL_NIF_TERM encrypt_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
   }
   secure_zero(data_out.data, data_out.size);
 
+  actual_res_len = data_out.size;
   P11_call(rv, p11_module, C_EncryptFinal, session_handle, data_out.data, &actual_res_len);
   if (rv != CKR_OK) {
     enif_release_binary(&data_out);
     return P11_error(env, "C_EncryptFinal", rv);
   }
+  P11_debug("C_EncryptFinal actual result length: %lu", actual_res_len);
 
   if (actual_res_len != expected_res_len) {
     enif_release_binary(&data_out);
@@ -2783,7 +2786,10 @@ static ERL_NIF_TERM decrypt_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
       enif_make_atom(env, "error"), 
       enif_make_atom(env, "memory_allocation_failed"));
   }
+  P11_debug("Allocated memory for data_out: %lu bytes at %p", data_out.size, data_out.data);
 
+  secure_zero(data_out.data, data_out.size);
+  actual_res_len = data_out.size;
   P11_call(rv, p11_module, C_DecryptFinal, session_handle, data_out.data, &actual_res_len);
   if (rv != CKR_OK) {
     enif_release_binary(&data_out);
