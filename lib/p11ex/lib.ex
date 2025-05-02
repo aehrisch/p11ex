@@ -545,6 +545,14 @@ defmodule P11ex.Lib do
     end
   end
 
+  @doc """
+  Encrypt data using the specified `mechanism` and `key` in a single call. Consider
+  using `P11ex.Lib.encrypt_init/3`, `P11ex.Lib.encrypt_update/2`, and
+  `P11ex.Lib.encrypt_final/1` if you want to encrypt data in chunks.
+
+  See `P11ex.Lib.encrypt_init/3` for examples on how to select an encryption mechanism
+  and set its parameters.
+  """
   def encrypt(%SessionHandle{} = session, mechanism, %ObjectHandle{} = key, data)
       when is_binary(data) do
     with :ok <- n_encrypt_init(session.module.ref, session.handle, mechanism, key.handle) do
@@ -552,33 +560,136 @@ defmodule P11ex.Lib do
     end
   end
 
-  @spec encrypt_init(SessionHandle.t(), any(), ObjectHandle.t()) :: :ok | {:error, atom()} | {:error, atom(), any()}
+  @doc """
+  Initialize an encryption operation involving the specified `mechanism` and `key`. This puts
+  the session into encryption mode and no other operations can be active at the same time. Use
+  `encrypt_update/2` and `encrypt_final/1` to provide data to encrypt and produce the ciphertext
+  chunks. Consider using `encrypt/4` if you want to encrypt data in a single call.
+
+  ## Setting an encryption mechanism
+
+  Some mechanisms require additional parameters. These parameters are passed as a
+  map. The NIF will translate the map into the appropriate PKCS#11 mechanism structure.
+  If this translation fails (e.g. missing required parameters or wrong type) the operation
+  will return an error of the form `{:error, :invalid_parameter, reason}`.
+
+  The following example show how to do this for common mechanisms:
+
+  ### AES ECB
+
+  No additional parameters are required for AES ECB mode.
+
+  ```elixir
+  :ok = P11ex.Session.encrypt_init(session, {:ckm_aes_ecb}, key)
+  ```
+
+  ### AES CBC and AES OFB
+
+  These mechanisms require an initialization vector (IV). This IV has to be the same length
+  as the block size of the cipher. For AES the block size is 16 bytes and thus the IV
+  has to be 16 bytes long.
+
+  ```elixir
+  iv = :crypto.strong_rand_bytes(16)
+  :ok = P11ex.Session.encrypt_init(session1, {:ckm_aes_cbc, %{iv: iv}}, key)
+  :ok = P11ex.Session.encrypt_init(session2, {:ckm_aes_ofb, %{iv: iv}}, key)
+  ```
+
+  ### AES CTR
+
+  This mechanism requires an initialization vector (IV) and the number of bits in the counter
+  (e.g. 32, 64, 128).
+
+  ```elixir
+  iv = :crypto.strong_rand_bytes(16)
+  params = %{iv: iv, counter_bits: 32}
+  :ok = P11ex.Session.encrypt_init(session, {:ckm_aes_ctr, params}, key)
+  ```
+
+  ### AES GCM
+
+  This mechanism has the following additional parameters:
+  * `:iv` - the initialization vector (IV). Typically, this is 12 bytes long.
+  * `:aad` - the optional authentication data (AAD). Not all PKCS#11 tokens support this parameter.
+    Also, the size of the AAD is limited by the token.
+  * `:tag_bits` - the number of bits in the authentication tag (typically 128)
+
+  ```elixir
+  iv = :crypto.strong_rand_bytes(12)
+  params = %{iv: iv, tag_bits: 128}
+  :ok = P11ex.Session.encrypt_init(session, {:ckm_aes_gcm, params}, key)
+  ```
+  """
+  @spec encrypt_init(SessionHandle.t(), mechanism_instance(), ObjectHandle.t())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
   def encrypt_init(%SessionHandle{} = session, mechanism, %ObjectHandle{} = key) do
     n_encrypt_init(session.module.ref, session.handle, mechanism, key.handle)
   end
 
+  @doc """
+  Provide a chunk of plaintext data to the encryption operation that is in
+  progress for this session (see `P11ex.Lib.encrypt_init/3`).
+  """
+  @spec encrypt_update(SessionHandle.t(), binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   def encrypt_update(%SessionHandle{} = session, data) do
     n_encrypt_update(session.module.ref, session.handle, data)
   end
 
+  @doc """
+  Finalize the encryption operation that is in progress for this session.
+  """
+  @spec encrypt_final(SessionHandle.t())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   def encrypt_final(%SessionHandle{} = session) do
     n_encrypt_final(session.module.ref, session.handle)
   end
 
+  @doc """
+  Decrypt data using the specified `mechanism` and `key` in a single call. See
+  `P11ex.Lib.encrypt_init/3` on how to select a decryption mechanism and
+  set its parameters. Consider using `P11ex.Lib.decrypt_init/3`,
+  `P11ex.Lib.decrypt_update/2`, and `P11ex.Lib.decrypt_final/1` if you
+  want to decrypt data in chunks.
+  """
   def decrypt(%SessionHandle{} = session, mechanism, %ObjectHandle{} = key, data) do
     with :ok <- decrypt_init(session, mechanism, key) do
       n_decrypt(session.module.ref, session.handle, data)
     end
   end
 
+  @doc """
+  Initialize a decryption operation involving the specified `mechanism` and `key`.
+  Many mechanisms require additional parameters. See `P11ex.Lib.encrypt_init/3` for more
+  information on mechanisms and their parameters.
+
+  The function returns `:ok` if the operation is initialized successfully. The session
+  is now in decryption mode and no other operations can be active at the same time. The
+  ciphertext can be provided in chunks using `P11ex.Lib.decrypt_update/2` and
+  `P11ex.Lib.decrypt_final/1`.
+  """
+  @spec decrypt_init(SessionHandle.t(), mechanism_instance(), ObjectHandle.t())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
   def decrypt_init(%SessionHandle{} = session, mechanism, %ObjectHandle{} = key) do
     n_decrypt_init(session.module.ref, session.handle, mechanism, key.handle)
   end
 
+  @doc """
+  Provide a chunk of ciphertext data to the decryption operation that is in
+  progress for this session (see `P11ex.Lib.decrypt_init/3`).
+  """
+  @spec decrypt_update(SessionHandle.t(), binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   def decrypt_update(%SessionHandle{} = session, data) do
     n_decrypt_update(session.module.ref, session.handle, data)
   end
 
+  @doc """
+  Finalize the decryption operation that is in progress for this session
+  (see `P11ex.Lib.decrypt_init/3`).
+  """
+  @spec decrypt_final(SessionHandle.t())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   def decrypt_final(%SessionHandle{} = session) do
     n_decrypt_final(session.module.ref, session.handle)
   end
@@ -844,41 +955,57 @@ defmodule P11ex.Lib do
     raise "NIF get_object_attributes/4 not implemented"
   end
 
+  @spec n_encrypt(reference(), non_neg_integer(), binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_encrypt(_p11_module, _session, _data) do
     # This function will be implemented in NIF
     raise "NIF encrypt/3 not implemented"
   end
 
+  @spec n_encrypt_init(reference(), non_neg_integer(), tuple(), non_neg_integer())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
   defp n_encrypt_init(_p11_module, _session, _mechanism, _data) do
     # This function will be implemented in NIF
     raise "NIF encrypt_init/4 not implemented"
   end
 
+  @spec n_encrypt_update(reference(), non_neg_integer(), binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_encrypt_update(_p11_module, _session, _data) do
     # This function will be implemented in NIF
     raise "NIF encrypt_update/3 not implemented"
   end
 
+  @spec n_encrypt_final(reference(), non_neg_integer())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_encrypt_final(_p11_module, _session) do
     # This function will be implemented in NIF
     raise "NIF encrypt_final/2 not implemented"
   end
 
+  @spec n_decrypt(reference(), non_neg_integer(), binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_decrypt(_p11_module, _session, _data) do
     # This function will be implemented in NIF
     raise "NIF decrypt/3 not implemented"
   end
 
+  @spec n_decrypt_init(reference(), non_neg_integer(), tuple(), non_neg_integer())
+    :: :ok | {:error, atom()} | {:error, atom(), any()}
   defp n_decrypt_init(_p11_module, _session, _mechanism, _data) do
     # This function will be implemented in NIF
     raise "NIF decrypt_init/4 not implemented"
   end
 
+  @spec n_decrypt_update(reference(), non_neg_integer(), binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_decrypt_update(_p11_module, _session, _data) do
     # This function will be implemented in NIF
     raise "NIF decrypt_update/3 not implemented"
   end
 
+  @spec n_decrypt_final(reference(), non_neg_integer())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_decrypt_final(_p11_module, _session) do
     # This function will be implemented in NIF
     raise "NIF decrypt_final/2 not implemented"

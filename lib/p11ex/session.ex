@@ -152,20 +152,17 @@ defmodule P11ex.Session do
 
   @doc """
   Encrypt data using the specified `mechanism` and `key` in a single call. See
-  `P11ex.Session.encrypt_init/3` on how to select an encryption mechanism and
+  `P11ex.Lib.encrypt/4` on how to select an encryption mechanism and
   set its parameters.
   """
   @spec encrypt(
     server :: GenServer.server(),
     mechanism :: Lib.mechanism_instance(),
-    key :: ObjectHandle.t(), data :: binary())
+    key :: ObjectHandle.t(),
+    data :: binary())
     :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   def encrypt(server \\ __MODULE__, mechanism, %ObjectHandle{} = key, data) do
     GenServer.call(server, {:encrypt, mechanism, key, data})
-  end
-
-  def decrypt(server \\ __MODULE__, mechanism, %ObjectHandle{} = key, data) do
-    GenServer.call(server, {:decrypt, mechanism, key, data})
   end
 
   @doc """
@@ -178,60 +175,8 @@ defmodule P11ex.Session do
   The function returns `:ok` if the operation is initialized successfully. That is, no
   other operations (e.g. decryption, signing, etc.) can be active at the same time.
 
-  ## Setting an encryption mechanism
-
-  Some mechanisms require additional parameters. These parameters are passed as a
-  map. The NIF will translate the map into the appropriate PKCS#11 mechanism structure.
-  If this translation fails (e.g. missing required parameters or wrong type) the operation
-  will return an error of the form `{:error, :invalid_parameter, reason}`.
-
-  The following example show how to do this for common mechanisms:
-
-  ### AES ECB
-
-  No additional parameters are required for AES ECB mode.
-
-  ```elixir
-  :ok = P11ex.Session.encrypt_init(session, {:ckm_aes_ecb}, key)
-  ```
-
-  ### AES CBC and AES OFB
-
-  These mechanisms require an initialization vector (IV). This IV has to be the same length
-  as the block size of the cipher. For AES the block size is 16 bytes and thus the IV
-  has to be 16 bytes long.
-
-  ```elixir
-  iv = :crypto.strong_rand_bytes(16)
-  :ok = P11ex.Session.encrypt_init(session1, {:ckm_aes_cbc, %{iv: iv}}, key)
-  :ok = P11ex.Session.encrypt_init(session2, {:ckm_aes_ofb, %{iv: iv}}, key)
-  ```
-
-  ### AES CTR
-
-  This mechanism requires an initialization vector (IV) and the number of bits in the counter
-  (e.g. 32, 64, 128).
-
-  ```elixir
-  iv = :crypto.strong_rand_bytes(16)
-  params = %{iv: iv, counter_bits: 32}
-  :ok = P11ex.Session.encrypt_init(session, {:ckm_aes_ctr, params}, key)
-  ```
-
-  ### AES GCM
-
-  This mechanism has the following additional parameters:
-  * `:iv` - the initialization vector (IV). Typically, this is 12 bytes long.
-  * `:aad` - the optional authentication data (AAD). Not all PKCS#11 tokens support this parameter.
-    Also, the size of the AAD is limited by the token.
-  * `:tag_bits` - the number of bits in the authentication tag (typically 128)
-
-  ```elixir
-  iv = :crypto.strong_rand_bytes(12)
-  params = %{iv: iv, tag_bits: 128}
-  :ok = P11ex.Session.encrypt_init(session, {:ckm_aes_gcm, params}, key)
-  ```
-
+  Many mechanisms require additional parameters. See `P11ex.Lib.encrypt_init/3` for more
+  information on mechanisms and their parameters.
   """
   @spec encrypt_init(
     server :: GenServer.server(),
@@ -241,22 +186,81 @@ defmodule P11ex.Session do
     GenServer.call(server, {:encrypt_init, mechanism, key})
   end
 
+  @doc """
+  Provide a chunk of plaintext data to the encryption operation that is in
+  progress for this session (see `P11ex.Session.encrypt_init/3`).
+  """
+  @spec encrypt_update(
+    server :: GenServer.server(),
+    data :: binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   def encrypt_update(server \\ __MODULE__, data) when is_binary(data) do
     GenServer.call(server, {:encrypt_update, data})
   end
 
+  @doc """
+  Finalize the encryption operation that is in progress for this session.
+  """
   def encrypt_final(server \\ __MODULE__) do
     GenServer.call(server, :encrypt_final)
   end
 
+  @doc """
+  Decrypt data using the specified `mechanism` and `key` in a single call. See
+  `P11ex.Lib.encrypt_init/3` on how to select a decryption mechanism and
+  set its parameters. Consider using `P11ex.Session.decrypt_init/3`,
+  `P11ex.Session.decrypt_update/2`, and `P11ex.Session.decrypt_final/1` if you
+  want to decrypt data in chunks.
+  """
+  @spec decrypt(
+    server :: GenServer.server(),
+    mechanism :: Lib.mechanism_instance(),
+    key :: ObjectHandle.t(),
+    data :: binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  def decrypt(server \\ __MODULE__, mechanism, %ObjectHandle{} = key, data) do
+    GenServer.call(server, {:decrypt, mechanism, key, data})
+  end
+
+  @doc """
+  Initialize a decryption operation involving the specified `mechanism` and `key`. Many
+  mechanisms require additional parameters. See `P11ex.Lib.encrypt_init/3` for more
+  information on mechanisms and their parameters.
+
+  The function returns `:ok` if the operation is initialized successfully. The session
+  is now in decryption mode and no other operations can be active at the same time. The
+  ciphertext can be provided in chunks using `P11ex.Session.decrypt_update/2` and
+  `P11ex.Session.decrypt_final/1`.
+
+  Consider using `P11ex.Session.decrypt/4` if you want to decrypt data in a single call.
+  """
+  @spec decrypt_init(
+    server :: GenServer.server(),
+    mechanism :: Lib.mechanism_instance(),
+    key :: ObjectHandle.t())
+      :: :ok | {:error, atom()} | {:error, atom(), any()}
   def decrypt_init(server \\ __MODULE__, mechanism, %ObjectHandle{} = key) do
     GenServer.call(server, {:decrypt_init, mechanism, key})
   end
 
+  @doc """
+  Provide a chunk of ciphertext data to the decryption operation that is in
+  progress for this session (see `P11ex.Session.decrypt_init/3`).
+  """
+  @spec decrypt_update(
+    server :: GenServer.server(),
+    data :: binary())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   def decrypt_update(server \\ __MODULE__, data) when is_binary(data) do
     GenServer.call(server, {:decrypt_update, data})
   end
 
+  @doc """
+  Finalize the decryption operation that is in progress for this session
+  (see `P11ex.Session.decrypt_init/3`).
+  """
+  @spec decrypt_final(server :: GenServer.server())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   def decrypt_final(server \\ __MODULE__) do
     GenServer.call(server, :decrypt_final)
   end
