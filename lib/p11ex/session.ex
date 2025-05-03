@@ -306,6 +306,8 @@ defmodule P11ex.Session do
   session's current operation is set to `:sign`. This operation can be
   finalized by calling `sign_final/1` or `sign/2`. Also, a failure of
   `sign_update/2` will end this state.
+
+  See `P11ex.Lib.sign_init/3` for more information on mechanisms and their parameters.
   """
   @spec sign_init(server :: GenServer.server(), Lib.mechanism_instance(), ObjectHandle.t())
     :: :ok | {:error, atom()} | {:error, atom(), any()}

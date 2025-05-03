@@ -705,8 +705,66 @@ defmodule P11ex.Lib do
   Initialize a signing operation or MAC computation. The `key`'s type
   must be suitable for the specified `mechanism`. If the initialization
   is successful, the session's current operation is set to `:sign`. This
-  operation can be finalized by calling `sign_final/1` or `sign/2`. Also,
-  a failure of `sign_update/2` will end this state.
+  operation can be finalized by calling `sign_final/1` or `sign/2`. Use
+  `sign_update/2` to provide data to the signing operation.
+
+  ## Example: Signing data in chunks
+
+  ```elixir
+  :ok = Session.sign_init(session, {:ckm_rsa_pkcs, %{hash_alg: :sha256}}, priv_key)
+  :ok = Session.sign_update(session, data1)
+  :ok = Session.sign_update(session, data2)
+  {:ok, signature} = Session.sign_final(session)
+  ```
+
+  ## Example: Signing data in one go
+
+  ```elixir
+  :ok = Session.sign_init(session, {:ckm_rsa_pkcs, %{hash_alg: :sha256}}, priv_key)
+  {:ok, signature} = Session.sign(session, data)
+  ```
+
+  ## Signing Mechanisms
+
+  ### RSA PKCS #1 v1.5 Signature and Encryption Mechanism
+
+  This mechanism requires a RSA private key and does not require any
+  additional parameters. The digest algorithm to use is specified in the
+  mechanism name. The following mechanisms fall into this category:
+
+  - `:ckm_rsa_pkcs` (uses plain RSA PKCS#1 v1.5 without digest computation)
+  - `:ckm_sha1_rsa_pkcs`
+  - `:ckm_sha224_rsa_pkcs`
+  - `:ckm_sha256_rsa_pkcs`
+  - `:ckm_sha384_rsa_pkcs`
+  - `:ckm_sha512_rsa_pkcs`
+
+  Example:
+
+  ```elixir
+  :ok = Session.sign_init(session, {:ckm_sha256_rsa_pkcs}, priv_key)
+  {:ok, signature} = Session.sign(session, data)
+  ```
+
+  ### RSA PKCS #1 PSS Signature Mechanism (`:ckm_rsa_pkcs_pss`)
+
+  This mechanism requires a RSA private key and the following parameters:
+
+  - `:salt_len` - the length of the salt in bytes.
+  - `:hash_alg` - the hash algorithm to use.
+  - `:mgf_hash_alg` - the hash algorithm to use for the mask generation function.
+
+  The `hash_alg` and `mgf_hash_alg` parameters identify an hash algorithm in the
+  same way as the `:crypto` module does. That is, possible values are `:sha`,
+  `:sha224`, `:sha256`, `:sha384`, and `:sha512`.
+
+  Example:
+
+  ```elixir
+  :ok = Session.sign_init(session, {:ckm_rsa_pkcs_pss, %{salt_len: 20, hash_alg: :sha256, mgf_hash_alg: :sha256}}, priv_key)
+  {:ok, signature} = Session.sign(session, data)
+  ```
+
   """
   @spec sign_init(SessionHandle.t(), mechanism_instance(), ObjectHandle.t())
     :: :ok | {:error, atom()} | {:error, atom(), any()}
