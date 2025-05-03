@@ -811,6 +811,22 @@ defmodule P11ex.Lib do
     n_sign(session.module.ref, session.handle, data)
   end
 
+  @doc """
+  Initialize a verification operation involving the specified `mechanism` and `key`.
+  The operation verifies signatures or MACs, depending the mechanism. Some mechanisms
+  require additional parameters. See `P11ex.Lib.sign_init/3` for more information
+  on mechanisms and their parameters.
+
+  If successful, the session is in verification mode and no other operations can be
+  active at the same time.
+
+  ## Example: Verifying a RSA PKCS #1 v1.5 signature
+
+  ```elixir
+  :ok = Session.verify_init(session, {:ckm_sha256_rsa_pkcs}, pub_key)
+  :ok = Session.verify(session, data, signature)
+  ```
+  """
   @spec verify_init(SessionHandle.t(), mechanism_instance(), ObjectHandle.t())
     :: :ok | {:error, atom()} | {:error, atom(), any()}
   def verify_init(%SessionHandle{} = session, mechanism, %ObjectHandle{} = key)
@@ -818,6 +834,14 @@ defmodule P11ex.Lib do
     n_verify_init(session.module.ref, session.handle, mechanism, key.handle)
   end
 
+  @doc """
+  Verify a signature or MAC. The session must be in the `:verify` state, so this function
+  must be called after `verify_init/3`. If the operation fails, the session's current
+  operation is reset.
+
+  The operation return `:ok` if the signature (or MAC) is valid. Otherwise, it returns
+  an error. Typically, the error reason is `:ckr_signature_invalid` or `:ckr_signature_len_range`.
+  """
   @spec verify(SessionHandle.t(), binary(), binary())
     :: :ok | {:error, atom()} | {:error, atom(), any()}
   def verify(%SessionHandle{} = session, data, signature)

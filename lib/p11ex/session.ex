@@ -351,6 +351,15 @@ defmodule P11ex.Session do
     GenServer.call(server, :sign_final)
   end
 
+  @doc """
+  Initialize a verification operation involving the specified `mechanism` and `key`.
+  The operation verifies signatures or MACs, depending the mechanism. Some mechanisms
+  require additional parameters. See `P11ex.Lib.sign_init/3` for more information
+  on mechanisms and their parameters.
+
+  If successful, the session is in verification mode and no other operations can be
+  active at the same time.
+  """
   @spec verify_init(server :: GenServer.server(), Lib.mechanism_instance(), ObjectHandle.t())
     :: :ok | {:error, atom()} | {:error, atom(), any()}
   def verify_init(server \\ __MODULE__, mechanism, %ObjectHandle{} = key)
@@ -358,6 +367,14 @@ defmodule P11ex.Session do
     GenServer.call(server, {:verify_init, mechanism, key})
   end
 
+  @doc """
+  Verify a signature or MAC. The session must be in the `:verify` state, so this function
+  must be called after `verify_init/3`. If the operation fails, the session's current
+  operation is reset.
+
+  The operation return `:ok` if the signature (or MAC) is valid. Otherwise, it returns
+  an error. Typically, the error reason is `:ckr_signature_invalid` or `:ckr_signature_len_range`.
+  """
   @spec verify(server :: GenServer.server(), binary(), binary())
     :: :ok | {:error, atom()} | {:error, atom(), any()}
   def verify(server \\ __MODULE__, data, signature)
