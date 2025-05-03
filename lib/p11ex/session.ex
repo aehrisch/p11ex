@@ -334,8 +334,24 @@ defmodule P11ex.Session do
   current operation is set to `:digest`. This operation can be finalized by calling
   `digest_final/1` or `digest/1`. Also, a failure of `digest_update/2` will end
   this state.
+
+  ## Example: Digest computation in chunks
+
+  ```elixir
+  :ok = P11ex.Session.digest_init(session, {:ckm_sha256})
+  :ok = P11ex.Session.digest_update(session, data1)
+  :ok = P11ex.Session.digest_update(session, data2)
+  {:ok, digest} = P11ex.Session.digest_final(session)
+  ```
+
+  ## Example: Digest computation in one go
+
+  ```elixir
+  :ok = P11ex.Session.digest_init(session, {:ckm_sha256})
+  {:ok, digest} = P11ex.Session.digest(session, data)
+  ```
   """
-  @spec digest_init(server :: GenServer.server(), Lib.mechanism_instance())
+  @spec digest_init(GenServer.server(), Lib.mechanism_instance())
     :: :ok | {:error, atom()} | {:error, atom(), any()}
   def digest_init(server \\ __MODULE__, mechanism)
       when is_tuple(mechanism) do
@@ -367,8 +383,8 @@ defmodule P11ex.Session do
   end
 
   @doc """
-  Get the digest of the data provided to the digest operation. The session must be in the `:digest` state,
-  so this function must be called after `digest_init/2` and `digest_update/2`.
+  Get the digest of the data provided to the digest operation. The session must be in the
+  `:digest` state, so this function must be called after `digest_init/2`.
   """
   @spec digest(server :: GenServer.server(), binary())
     :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}

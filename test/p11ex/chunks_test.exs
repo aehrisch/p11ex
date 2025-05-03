@@ -109,5 +109,44 @@ defmodule P11ex.ChunksTest do
     :ok = Session.destroy_object(context.session_pid, key)
   end
 
+  @tag :chunk_digest
+  test "digest in chunks", context do
+
+    data_sizes = [5, 16, 32, 128, 256, 1024, 8192, 16_384]
+    part_sizes = [3, 8, 16, 64, 100, 256]
+
+    algs = [
+      {:ckm_sha1, :sha},
+      {:ckm_sha224, :sha224},
+      {:ckm_sha256, :sha256},
+      {:ckm_sha384, :sha384},
+      {:ckm_sha512, :sha512}
+    ]
+
+    algs
+      |> Enum.each(fn {digest_mech, digest_name} ->
+        data_sizes
+        |> Enum.each(fn data_size ->
+          data = :crypto.strong_rand_bytes(data_size)
+
+          part_sizes
+          |> Enum.each(fn part_size ->
+            chunks = for <<chunk::binary-size(part_size) <- data>>, do: chunk
+            remainder = binary_part(data, div(byte_size(data), part_size) * part_size, rem(byte_size(data), part_size))
+            chunks = if byte_size(remainder) > 0, do: chunks ++ [remainder], else: chunks
+
+            :ok = Session.digest_init(context.session_pid, {digest_mech})
+
+            for chunk <- chunks do
+              :ok = Session.digest_update(context.session_pid, chunk)
+            end
+
+            {:ok, final_digest} = Session.digest_final(context.session_pid)
+            assert :crypto.hash(digest_name, data) == final_digest
+          end)
+      end)
+    end)
+  end
+
 
 end

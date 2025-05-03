@@ -772,6 +772,22 @@ defmodule P11ex.Lib do
   `:digest`. Use `digest_update/2` to provide data to the digest operation.
   Call `digest_final/1` to finalize the operation and get the digest. Or, call
   `digest/2` to provide all data at once and get the digest in one go.
+
+  ## Example: Digest computation in chunks
+
+  ```elixir
+  :ok = P11ex.Session.digest_init(session, {:ckm_sha256})
+  :ok = P11ex.Session.digest_update(session, data1)
+  :ok = P11ex.Session.digest_update(session, data2)
+  {:ok, digest} = P11ex.Session.digest_final(session)
+  ```
+
+  ## Example: Digest computation in one go
+
+  ```elixir
+  :ok = P11ex.Session.digest_init(session, {:ckm_sha256})
+  {:ok, digest} = P11ex.Session.digest(session, data)
+  ```
   """
   @spec digest_init(SessionHandle.t(), mechanism_instance())
     :: :ok | {:error, atom()} | {:error, atom(), any()}
