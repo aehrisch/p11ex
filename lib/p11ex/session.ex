@@ -154,6 +154,13 @@ defmodule P11ex.Session do
   Encrypt data using the specified `mechanism` and `key` in a single call. See
   `P11ex.Lib.encrypt/4` on how to select an encryption mechanism and
   set its parameters.
+
+  ### Example: Encrypt data in a single call
+
+  ```elixir
+  iv = :crypto.strong_rand_bytes(12)
+  {:ok, ciphertext} = P11ex.Session.encrypt(session, {:ckm_aes_gcm, %{iv: iv, tag_bits: 128}}, key, plaintext)
+  ```
   """
   @spec encrypt(
     server :: GenServer.server(),
@@ -177,6 +184,17 @@ defmodule P11ex.Session do
 
   Many mechanisms require additional parameters. See `P11ex.Lib.encrypt_init/3` for more
   information on mechanisms and their parameters.
+
+  ### Example: Encrypt data in chunks
+
+  ```elixir
+  iv = :crypto.strong_rand_bytes(12)
+  :ok = P11ex.Session.encrypt_init(session, {:ckm_aes_gcm, %{iv: iv, tag_bits: 128}})
+  {:ok, cipher_chunk1} = P11ex.Session.encrypt_update(session, plain_chunk1)
+  {:ok, cipher_chunk2} = P11ex.Session.encrypt_update(session, plain_chunk2)
+  {:ok, cipher_chunk3} = P11ex.Session.encrypt_final(session)
+  ciphertext = cipher_chunk1 <> cipher_chunk2 <> cipher_chunk3
+  ```
   """
   @spec encrypt_init(
     server :: GenServer.server(),
@@ -211,6 +229,12 @@ defmodule P11ex.Session do
   set its parameters. Consider using `P11ex.Session.decrypt_init/3`,
   `P11ex.Session.decrypt_update/2`, and `P11ex.Session.decrypt_final/1` if you
   want to decrypt data in chunks.
+
+  ### Example: Decrypt data in a single call
+
+  ```elixir
+  {:ok, plaintext} = P11ex.Session.decrypt(session, {:ckm_aes_gcm, %{iv: iv, tag_bits: 128}}, key, ciphertext)
+  ```
   """
   @spec decrypt(
     server :: GenServer.server(),
@@ -233,6 +257,16 @@ defmodule P11ex.Session do
   `P11ex.Session.decrypt_final/1`.
 
   Consider using `P11ex.Session.decrypt/4` if you want to decrypt data in a single call.
+
+  ### Example: Decrypt data in chunks
+
+  ```elixir
+  :ok = P11ex.Session.decrypt_init(session, {:ckm_aes_gcm, %{iv: iv, tag_bits: 128}})
+  {:ok, plain_chunk1} = P11ex.Session.decrypt_update(session, cipher_chunk1)
+  {:ok, plain_chunk2} = P11ex.Session.decrypt_update(session, cipher_chunk2)
+  {:ok, plain_chunk3} = P11ex.Session.decrypt_final(session)
+  plaintext = plain_chunk1 <> plain_chunk2 <> plain_chunk3
+  ```
   """
   @spec decrypt_init(
     server :: GenServer.server(),
