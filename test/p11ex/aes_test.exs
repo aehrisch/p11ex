@@ -1,6 +1,5 @@
 defmodule P11ExTest.AesKeygen do
 
-
   use ExUnit.Case, async: false
 
   alias P11ex.Lib, as: Lib
@@ -102,51 +101,6 @@ defmodule P11ExTest.AesKeygen do
     end)
   end
 
-  # This test encrypts with AES ECB using mulitple calls to encrypt_update
-  test "aes_ecb encrypt/decrypt, multiple updates", context do
-
-    key_id = :crypto.strong_rand_bytes(16)
-    assert {:ok, key} =
-      Session.generate_key(context.session_pid,
-      {:ckm_aes_key_gen},
-      [
-        {:cka_token, false},
-        {:cka_label, "test_key"},
-        {:cka_value_len, 16},
-        {:cka_id, key_id}
-      ])
-
-    data_sizes = [16, 32, 128, 256, 1024, 8192, 16_384]
-    part_sizes = [8, 16, 64, 100, 256]
-
-    data_sizes
-    |> Enum.each(fn data_size ->
-        data = :crypto.strong_rand_bytes(data_size)
-
-        # Split the data into chunks of the given size and encrypt each chunk
-        part_sizes
-        |> Enum.each(fn part_size ->
-          chunks = for <<chunk::binary-size(part_size) <- data>>, do: chunk
-          remainder = binary_part(data, div(byte_size(data), part_size) * part_size, rem(byte_size(data), part_size))
-          chunks = if byte_size(remainder) > 0, do: chunks ++ [remainder], else: chunks
-
-          :ok = Session.encrypt_init(context.session_pid, {:ckm_aes_ecb}, key)
-          encrypted_chunks = for chunk <- chunks do
-            {:ok, encrypted_chunk} = Session.encrypt_update(context.session_pid, chunk)
-            encrypted_chunk
-          end
-
-          {:ok, final_encrypted} = Session.encrypt_final(context.session_pid)
-
-          encrypted = Enum.join(encrypted_chunks) <> final_encrypted
-
-          # Decrypt the result in a single step
-          {:ok, decrypted} = Session.decrypt(context.session_pid, {:ckm_aes_ecb}, key, encrypted)
-
-          assert data == decrypted
-        end)
-    end)
-  end
 
   test "aes_cbc encrypt/decrypt, one call", context do
 

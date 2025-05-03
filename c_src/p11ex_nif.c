@@ -2545,11 +2545,13 @@ static ERL_NIF_TERM encrypt_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
   }
   P11_debug("C_EncryptFinal actual result length: %lu", actual_res_len);
 
-  if (actual_res_len != expected_res_len) {
-    enif_release_binary(&data_out);
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "unexpected_result_length"));
+  if (actual_res_len < expected_res_len) {
+    if (!enif_realloc_binary(&data_out, actual_res_len)) {
+      enif_release_binary(&data_out);
+      return enif_make_tuple2(env, 
+        enif_make_atom(env, "error"), 
+        enif_make_atom(env, "unexpected_result_length"));
+    }
   }
 
   data_out_term = enif_make_binary(env, &data_out);
@@ -2735,11 +2737,13 @@ static ERL_NIF_TERM decrypt_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
     return P11_error(env, "C_DecryptUpdate", rv);
   }
 
-  if (actual_res_len != expected_res_len) {
-    enif_release_binary(&data_out);
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "unexpected_result_length"));
+  if (actual_res_len < expected_res_len) {
+    if (!enif_realloc_binary(&data_out, actual_res_len)) {
+      enif_release_binary(&data_out);
+      return enif_make_tuple2(env, 
+        enif_make_atom(env, "error"), 
+        enif_make_atom(env, "unexpected_result_length"));
+    }
   }
 
   if (!enif_alloc_binary(actual_res_len, &data_out)) {
@@ -2796,11 +2800,14 @@ static ERL_NIF_TERM decrypt_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
     return P11_error(env, "C_DecryptFinal", rv);
   }
 
-  if (actual_res_len != expected_res_len) {
-    enif_release_binary(&data_out);
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "unexpected_result_length"));
+  if (actual_res_len < expected_res_len) {
+    P11_debug("C_DecryptFinal result length is less than expected, actual_res_len: %lu, expected_res_len: %lu", actual_res_len, expected_res_len);
+    if (!enif_realloc_binary(&data_out, actual_res_len)) {
+      enif_release_binary(&data_out);
+      return enif_make_tuple2(env, 
+        enif_make_atom(env, "error"), 
+        enif_make_atom(env, "unexpected_result_length"));
+    }
   }
 
   data_out_term = enif_make_binary(env, &data_out);
