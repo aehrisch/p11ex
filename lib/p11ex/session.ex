@@ -146,6 +146,13 @@ defmodule P11ex.Session do
     GenServer.call(server, {:read_object, object, type_hint})
   end
 
+  @doc """
+  Generate a symmetric key in the session. The key is generated according to the specified `mechanism`
+  and the `key_template`. The `key_template` is a list of attributes that will be used to generate
+  the key. The function returns a handle to the generated key.
+
+  See `P11ex.Lib.generate_key/3` for more information on mechanisms and their parameters.
+  """
   def generate_key(server \\ __MODULE__, mechanism, key_template) do
     GenServer.call(server, {:generate_key, mechanism, key_template})
   end
@@ -465,6 +472,12 @@ defmodule P11ex.Session do
     GenServer.call(server, {:generate_random, len})
   end
 
+  @doc """
+  Generate a key pair in the session. The key pair is generated according to the specified `mechanism`
+  and the `pub_key_template` and `priv_key_template`.
+
+  See `P11ex.Lib.generate_key_pair/4` for more information on mechanisms and their parameters.
+  """
   @spec generate_key_pair(server :: GenServer.server(), Lib.mechanism_instance(), Lib.attributes(), Lib.attributes())
     :: {:ok, {ObjectHandle.t(), ObjectHandle.t()}} | {:error, atom()} | {:error, atom(), any()}
   def generate_key_pair(server \\ __MODULE__, mechanism,

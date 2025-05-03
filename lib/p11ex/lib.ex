@@ -487,6 +487,33 @@ defmodule P11ex.Lib do
     end
   end
 
+  @doc """
+  Generate a symmetric key in the session. The key is generated according to the specified `mechanism`
+  and the `key_template`. The `key_template` is a list of attributes that will be used to generate
+  the key. The function returns a handle to the generated key.
+
+  ## Example: Generate a 128-bit AES key
+
+  The following example generates a 128-bit AES key with the label "test_key" and a random
+  key ID. The key is a session key.
+
+  ```elixir
+  key_id = :crypto.strong_rand_bytes(16)
+  {:ok, key} =
+    Session.generate_key(context.session_pid,
+      {:ckm_aes_key_gen},
+      [
+        {:cka_token, false},
+        {:cka_label, "test_key"},
+        {:cka_value_len, key_id},
+        {:cka_id, key_id},
+        {:cka_encrypt, true},
+        {:cka_decrypt, false},
+        {:cka_derive, false},
+        {:cka_sign, false}
+      ])
+  ```
+  """
   def generate_key(%SessionHandle{} = session, mechanism, key_template)
       when is_list(key_template) do
     Logger.debug("generate_key: session=#{inspect(session)}, mechanism=#{inspect(mechanism)}, key_template=#{inspect(key_template)}")
@@ -497,7 +524,6 @@ defmodule P11ex.Lib do
       end
     end
   end
-
 
   defp post_convert_attributes(attribute_map) do
     attribute_map
@@ -936,6 +962,40 @@ defmodule P11ex.Lib do
     end
   end
 
+  @doc """
+  Generate a key pair in the session. The key pair is generated according to the specified `mechanism`
+  and the `pub_key_template` and `priv_key_template`. The function returns a tuple with the public
+  and private key handles.
+
+  ## Example: Generate a RSA key pair
+
+  ```elixir
+    mechanism = {:ckm_rsa_pkcs_key_pair_gen}
+
+    pubk_template = [
+      {:cka_token, false},
+      {:cka_encrypt, true},
+      {:cka_verify, true},
+      {:cka_modulus_bits, 2048},
+      {:cka_public_exponent, 65537},
+      {:cka_label, "rsa_test_key"}
+    ]
+
+    prvk_template = [
+      {:cka_token, false},
+      {:cka_private, true},
+      {:cka_sensitive, true},
+      {:cka_decrypt, true},
+      {:cka_sign, true},
+      {:cka_label, "rsa_test_key"}
+    ]
+
+    {pubk, prvk} =
+      P11ex.Session.generate_key_pair(session_pid,
+      {:ckm_rsa_pkcs_key_pair_gen},
+      pubk_template, prvk_template)
+  ```
+  """
   @spec generate_key_pair(SessionHandle.t(), mechanism_instance(), attributes(), attributes())
     :: {:ok, {ObjectHandle.t(), ObjectHandle.t()}} | {:error, atom()} | {:error, atom(), any()}
   def generate_key_pair(session, mechanism, pub_key_template, priv_key_template) do
