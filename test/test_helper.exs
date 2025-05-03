@@ -63,6 +63,39 @@ defmodule P11ex.TestHelper do
 
 end
 
+defmodule P11exRSATestHelper do
+
+  def gen_keypair(session_pid) do
+
+    mechanism = {:ckm_rsa_pkcs_key_pair_gen}
+
+    pubk_template = [
+      {:cka_token, false},
+      {:cka_encrypt, true},
+      {:cka_verify, true},
+      {:cka_modulus_bits, 2048},
+      {:cka_public_exponent, 65537},
+      {:cka_label, "rsa_test_key"}
+    ]
+
+    prvk_template = [
+      {:cka_token, false},
+      {:cka_private, true},
+      {:cka_sensitive, true},
+      {:cka_decrypt, true},
+      {:cka_sign, true},
+      {:cka_label, "rsa_test_key"}
+    ]
+
+    {:ok, {pubk, prvk}} =
+      P11ex.Session.generate_key_pair(session_pid,
+      {:ckm_rsa_pkcs_key_pair_gen},
+      pubk_template, prvk_template)
+    {pubk, prvk}
+  end
+
+end
+
 defmodule TestSupervisor do
   use Supervisor
 

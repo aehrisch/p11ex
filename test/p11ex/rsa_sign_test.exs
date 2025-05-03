@@ -14,37 +14,8 @@ defmodule P11ExTest.RsaSign do
     P11ex.TestHelper.setup_session()
   end
 
-  def gen_keypair(session_pid) do
-
-    mechanism = {:ckm_rsa_pkcs_key_pair_gen}
-
-    pubk_template = [
-      {:cka_token, false},
-      {:cka_encrypt, true},
-      {:cka_verify, true},
-      {:cka_modulus_bits, 2048},
-      {:cka_public_exponent, 65537},
-      {:cka_label, "rsa_test_key"}
-    ]
-
-    prvk_template = [
-      {:cka_token, false},
-      {:cka_private, true},
-      {:cka_sensitive, true},
-      {:cka_decrypt, true},
-      {:cka_sign, true},
-      {:cka_label, "rsa_test_key"}
-    ]
-
-    assert {:ok, {pubk, prvk}} =
-      Session.generate_key_pair(session_pid,
-      {:ckm_rsa_pkcs_key_pair_gen},
-      pubk_template, prvk_template)
-    {pubk, prvk}
-  end
-
   test "sign CKM_RSA_PKCS", context do
-    {pubk, prvk} = gen_keypair(context.session_pid)
+    {pubk, prvk} = P11exRSATestHelper.gen_keypair(context.session_pid)
 
     # read the public key and make a public key record useable with the Erlang public_key module
     {:ok, pubk_attrs, []} = Session.read_object(context.session_pid, pubk, Lib.ObjectAttributes.rsa_public_key())
@@ -77,7 +48,7 @@ defmodule P11ExTest.RsaSign do
   end
 
   test "sign CKM_RSA_PKCS_PSS", context do
-    {pubk, prvk} = gen_keypair(context.session_pid)
+    {pubk, prvk} = P11exRSATestHelper.gen_keypair(context.session_pid)
 
     # read the public key and make a public key record useable with the Erlang public_key module
     {:ok, pubk_attrs, []} = Session.read_object(context.session_pid, pubk, Lib.ObjectAttributes.rsa_public_key())
