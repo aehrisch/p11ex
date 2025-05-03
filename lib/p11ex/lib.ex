@@ -720,6 +720,9 @@ defmodule P11ex.Lib do
     n_decrypt_final(session.module.ref, session.handle)
   end
 
+  @doc """
+  Generate random data using the token's RNG.
+  """
   @spec generate_random(SessionHandle.t(), non_neg_integer())
     :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   def generate_random(%SessionHandle{} = session, len)

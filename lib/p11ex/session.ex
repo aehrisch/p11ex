@@ -463,7 +463,7 @@ defmodule P11ex.Session do
   end
 
   @doc """
-  Generate random data.
+  Generate random data using the token's RNG.
   """
   @spec generate_random(server :: GenServer.server(), len :: non_neg_integer())
     :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
