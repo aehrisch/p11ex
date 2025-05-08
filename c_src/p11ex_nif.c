@@ -1720,6 +1720,8 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
       CK_BYTE_PTR iv_ptr = NULL, aad_ptr = NULL;
       CK_ULONG tag_bits = 0;
       ERL_NIF_TERM tag_bits_term, iv_term, aad_term;
+      int with_aad = 0;      
+      CK_ULONG aad_len = 0;
 
       if (enif_get_map_value(env, map, enif_make_atom(env, "iv"), &iv_term)
           && enif_is_binary(env, iv_term)) {
@@ -1733,6 +1735,8 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
       if (enif_get_map_value(env, map, enif_make_atom(env, "aad"), &aad_term)) {
         if (enif_is_binary(env, aad_term)) {
           enif_inspect_binary(env, aad_term, &aad_binary);
+          with_aad = 1;
+          aad_len = aad_binary.size;
         } else {
           return enif_make_tuple3(env, enif_make_atom(env, "error"), 
             enif_make_atom(env, "invalid_aad_parameter"), aad_term);
@@ -1746,12 +1750,12 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
       }
 
       P11_debug("set_mechanism_parameters_from_term: CKM_AES_GCM iv_len=%x, aad_len=%x",
-        iv_binary.size, aad_binary.size);
+        iv_binary.size, aad_len);
       /* The parameters for this mechanism are represented as a struct.
          We allocate memory for the struct, fill it, and set the pointer
          in the mechanism structure to this struct. Directly after the parameter 
          struct, we allocate memory for the iv and aad. */
-      param_size = sizeof(CK_GCM_PARAMS) + iv_binary.size + aad_binary.size;
+      param_size = sizeof(CK_GCM_PARAMS) + iv_binary.size + aad_len;
       params = (CK_GCM_PARAMS*) malloc(param_size);
       if (params == NULL) {
         return P11_memory_error(env, "set_mechanism_parameters_from_term");
@@ -1761,14 +1765,22 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
       iv_ptr = (CK_BYTE_PTR) ((CK_BYTE_PTR)params + sizeof(CK_GCM_PARAMS));
       aad_ptr = (CK_BYTE_PTR) (iv_ptr + iv_binary.size);
       memcpy(iv_ptr, iv_binary.data, iv_binary.size);
-      memcpy(aad_ptr, aad_binary.data, aad_binary.size);
+      if (with_aad) {
+        memcpy(aad_ptr, aad_binary.data, aad_binary.size);
+      }
 
       params->pIv = iv_ptr;
       params->ulIvLen = iv_binary.size;
       params->ulIvBits = 0;
 
-      params->pAAD = aad_ptr;
-      params->ulAADLen = aad_binary.size;
+      if (with_aad) {
+        params->pAAD = aad_ptr;
+        params->ulAADLen = aad_binary.size;
+      } else {
+        params->pAAD = NULL;
+        params->ulAADLen = 0;
+      }
+
       params->ulTagBits = tag_bits;
 
       mechanism->pParameter = params;
