@@ -1752,10 +1752,11 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
          in the mechanism structure to this struct. Directly after the parameter 
          struct, we allocate memory for the iv and aad. */
       param_size = sizeof(CK_GCM_PARAMS) + iv_binary.size + aad_binary.size;
-      params = (CK_GCM_PARAMS*) calloc(1, param_size);
+      params = (CK_GCM_PARAMS*) malloc(param_size);
       if (params == NULL) {
         return P11_memory_error(env, "set_mechanism_parameters_from_term");
       }
+      secure_zero(params, param_size);
       
       iv_ptr = (CK_BYTE_PTR) ((CK_BYTE_PTR)params + sizeof(CK_GCM_PARAMS));
       aad_ptr = (CK_BYTE_PTR) (iv_ptr + iv_binary.size);
