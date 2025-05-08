@@ -47,8 +47,8 @@ jobs:
               # Install hex and get dependencies
               mix local.hex --force && \
               mix deps.get && \
-              mix compile --warnings-as-errors && \
-              mix test --cover --only yubikey || true"
+              mix compile && \
+              mix test --cover --only yubikey"
 
       - name: Print workspace
         run: |

@@ -103,7 +103,7 @@ jobs:
               mix local.hex --force && \
               mix deps.get && \
               mix compile && \
-              mix test --cover"
+              mix test --cover --exclude yubikey"
 
       - name: Print workspace
         run: |
