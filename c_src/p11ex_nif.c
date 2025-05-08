@@ -95,6 +95,14 @@ void print_buffer(const void* buffer, size_t length) {
       enif_make_atom(env, "error"), \
       enif_make_tuple2(env, enif_make_atom(env, fname), ckr_to_atom(env, rv))))
 
+#define P11_memory_error(env, fname) \
+    (enif_make_tuple2(env, \
+      enif_make_atom(env, "error"), \
+      enif_make_tuple3(env, \
+        enif_make_atom(env, fname), \
+        enif_make_atom(env, "memory_allocation_failed"), \
+        enif_make_uint(env, __LINE__))))
+
 #define P11_call(rv, p11_module, func, args...) \
     if (P11_DEBUG) { \
       fprintf(stderr, "P11_call: module=%p, func=%s\n", p11_module, #func); \
@@ -1035,9 +1043,7 @@ static ERL_NIF_TERM session_login(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
 
   copy_pin = (char *) calloc(pin_length + 1, sizeof(char));
   if (copy_pin == NULL) {
-    return enif_make_tuple2(env, 
-              enif_make_atom(env, "error"), 
-              enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "C_Login");
   }
   memcpy(copy_pin, pin, pin_length);
   
@@ -1183,9 +1189,7 @@ static ERL_NIF_TERM find_objects(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 
   object_list = (CK_OBJECT_HANDLE_PTR) calloc(max_hits, sizeof(CK_OBJECT_HANDLE));
   if (object_list == NULL) {
-    return enif_make_tuple2(env, 
-              enif_make_atom(env, "error"), 
-              enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "find_objects");
   }
   P11_debug("find_objects: allocated object_list=%p len=%lu", object_list, max_hits);
 
@@ -1257,9 +1261,7 @@ static ERL_NIF_TERM term_to_attrib_template(
   secure_zero(attribute_name, sizeof(attribute_name));
   attributes = (CK_ATTRIBUTE_PTR) calloc(sizeof(CK_ATTRIBUTE), list_length);
   if (attributes == NULL) {
-    return enif_make_tuple2(env, 
-          enif_make_atom(env, "error"), 
-          enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "term_to_attrib_template");
   }
   P11_debug("term_to_attrib_template: allocated attributes=%p len=%lu", attributes, list_length);
 
@@ -1358,9 +1360,7 @@ static ERL_NIF_TERM get_object_attributes(ErlNifEnv* env, int argc, const ERL_NI
           }
         }
         free(templates);
-        return enif_make_tuple2(env, 
-          enif_make_atom(env, "error"), 
-          enif_make_atom(env, "memory_allocation_failed"));
+        return P11_memory_error(env, "get_object_attributes");
       }
     }
   }
@@ -1428,9 +1428,7 @@ static ERL_NIF_TERM p11str_to_term(ErlNifEnv *env, CK_UTF8CHAR_PTR utf8_array, s
 
     str = malloc(length + 1);
     if (str == NULL) {
-      return enif_make_tuple2(env, 
-          enif_make_atom(env, "error"), 
-          enif_make_atom(env, "memory_allocation_failed"));
+      return P11_memory_error(env, "p11str_to_term");
     }
 
     memcpy(str, utf8_array, length);
@@ -1470,10 +1468,7 @@ static ERL_NIF_TERM term_to_attributes(
   }
   P11_debug("term_to_attributes: list_length=%lu", list_length);
 
-  mem_error_term = 
-      enif_make_tuple2(env, 
-          enif_make_atom(env, "error"), 
-          enif_make_atom(env, "memory_allocation_failed"));
+  mem_error_term = P11_memory_error(env, "term_to_attributes");
 
   all_values_copied = 0;
   growth_factor = 1; 
@@ -1759,9 +1754,7 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
       param_size = sizeof(CK_GCM_PARAMS) + iv_binary.size + aad_binary.size;
       params = (CK_GCM_PARAMS*) calloc(1, param_size);
       if (params == NULL) {
-        return enif_make_tuple2(env, 
-          enif_make_atom(env, "error"), 
-          enif_make_atom(env, "memory_allocation_failed"));
+        return P11_memory_error(env, "set_mechanism_parameters_from_term");
       }
       
       iv_ptr = (CK_BYTE_PTR) ((CK_BYTE_PTR)params + sizeof(CK_GCM_PARAMS));
@@ -1816,9 +1809,7 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
          just a byte array. */
       params = (CK_BYTE_PTR) calloc(1, param_size);
       if (params == NULL) {
-        return enif_make_tuple2(env, 
-          enif_make_atom(env, "error"), 
-          enif_make_atom(env, "memory_allocation_failed"));
+        return P11_memory_error(env, "set_mechanism_parameters_from_term");
       }
 
       memcpy(params, iv_binary.data, param_size);
@@ -1862,9 +1853,7 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
          in the mechanism structure to the struct. */
       params = (CK_AES_CTR_PARAMS*) calloc(1, sizeof(CK_AES_CTR_PARAMS));
       if (params == NULL) {
-        return enif_make_tuple2(env, 
-          enif_make_atom(env, "error"), 
-          enif_make_atom(env, "memory_allocation_failed"));
+        return P11_memory_error(env, "set_mechanism_parameters_from_term");
       }
     
       memcpy(params->cb, iv_binary.data, sizeof(params->cb));
@@ -1918,9 +1907,7 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
       param_size = sizeof(CK_CCM_PARAMS) + nonce_binary.size + aad_binary.size;
       params = (CK_CCM_PARAMS*) calloc(1, param_size);
       if (params == NULL) {
-        return enif_make_tuple2(env, 
-          enif_make_atom(env, "error"), 
-          enif_make_atom(env, "memory_allocation_failed"));
+        return P11_memory_error(env, "set_mechanism_parameters_from_term");
       }
       
       memcpy(params->pNonce, nonce_binary.data, nonce_binary.size);
@@ -1952,9 +1939,7 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
       
       params = (CK_ULONG_PTR) calloc(1, sizeof(CK_ULONG));
       if (params == NULL) {
-        return enif_make_tuple2(env, 
-          enif_make_atom(env, "error"), 
-          enif_make_atom(env, "memory_allocation_failed"));
+        return P11_memory_error(env, "set_mechanism_parameters_from_term");
       }
 
       *params = mac_len;
@@ -1980,9 +1965,7 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
 
       params = (CK_RSA_PKCS_PSS_PARAMS*) calloc(1, sizeof(CK_RSA_PKCS_PSS_PARAMS));
       if (params == NULL) {
-        return enif_make_tuple2(env, 
-          enif_make_atom(env, "error"), 
-          enif_make_atom(env, "memory_allocation_failed"));
+        return P11_memory_error(env, "set_mechanism_parameters_from_term");
       }
 
       if (!enif_get_map_value(env, map, enif_make_atom(env, "hash_alg"), &hash_alg_term)
@@ -2273,9 +2256,7 @@ static ERL_NIF_TERM attribute_to_term(ErlNifEnv* env, CK_ATTRIBUTE* attribute) {
     case P11_ATTR_TYPE_BYTES:
       P11_debug("attribute_to_term: allocating binary for %lu bytes", attribute->ulValueLen);
       if (!enif_alloc_binary(attribute->ulValueLen, &binary)) {
-        return enif_make_tuple2(env, 
-          enif_make_atom(env, "error"), 
-          enif_make_atom(env, "memory_allocation_failed"));
+        return P11_memory_error(env, "attribute_to_term");
       }
       memcpy(binary.data, attribute->pValue, attribute->ulValueLen);
       binary.size = attribute->ulValueLen;
@@ -2410,9 +2391,7 @@ static ERL_NIF_TERM encrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[] 
   P11_debug("C_Encrypt expected result length: %lu", res_len1);
 
   if (!enif_alloc_binary(res_len1, &data_out)) {
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "encrypt");
   }
   P11_debug("Allocated memory for data_out: %lu bytes at %p", data_out.size, data_out.data);
 
@@ -2472,9 +2451,7 @@ static ERL_NIF_TERM encrypt_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
   P11_debug("C_EncryptUpdate expected result length: %lu", expected_res_len);
 
   if (!enif_alloc_binary(expected_res_len, &data_out)) {
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "encrypt_update");
   }
   P11_debug("Allocated memory for data_out: %lu bytes at %p", data_out.size, data_out.data);
 
@@ -2531,9 +2508,7 @@ static ERL_NIF_TERM encrypt_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
   P11_debug("C_EncryptFinal expected result length: %lu", expected_res_len);
 
   if (!enif_alloc_binary(expected_res_len, &data_out)) {
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "encrypt_final");
   }
   secure_zero(data_out.data, data_out.size);
 
@@ -2649,9 +2624,7 @@ static ERL_NIF_TERM decrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
   P11_debug("C_Decrypt expected result length: %lu", res_len1);
 
   if (!enif_alloc_binary(res_len1, &data_out)) {
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "decrypt");
   }
   P11_debug("Allocated memory for data_out: %lu bytes at %p", data_out.size, data_out.data);
 
@@ -2670,9 +2643,7 @@ static ERL_NIF_TERM decrypt(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     P11_debug("C_Decrypt result length is less than expected, res_len2: %lu, res_len1: %lu", res_len2, res_len1);
     if (!enif_realloc_binary(&data_out, res_len2)) {
       enif_release_binary(&data_out);
-      return enif_make_tuple2(env, 
-        enif_make_atom(env, "error"), 
-        enif_make_atom(env, "memory_reallocation_failed"));
+      return P11_memory_error(env, "decrypt");
     }
   }
 
@@ -2720,9 +2691,7 @@ static ERL_NIF_TERM decrypt_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
   }
 
   if (!enif_alloc_binary(expected_res_len, &data_out)) {
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "decrypt_update");
   }
   P11_debug("Allocated memory for data_out: %lu bytes at %p", data_out.size, data_out.data);
 
@@ -2747,9 +2716,7 @@ static ERL_NIF_TERM decrypt_update(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
   }
 
   if (!enif_alloc_binary(actual_res_len, &data_out)) {
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "decrypt_update");
   }
   P11_debug("Allocated memory for data_out: %lu bytes at %p", data_out.size, data_out.data);
 
@@ -2786,9 +2753,7 @@ static ERL_NIF_TERM decrypt_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
   P11_call(rv, p11_module, C_DecryptFinal, session_handle, NULL, &expected_res_len);
 
   if (!enif_alloc_binary(expected_res_len, &data_out)) {
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "decrypt_final");
   }
   P11_debug("Allocated memory for data_out: %lu bytes at %p", data_out.size, data_out.data);
 
@@ -2841,9 +2806,7 @@ static ERL_NIF_TERM generate_random(ErlNifEnv* env, int argc, const ERL_NIF_TERM
   ULONG_ARG(env, argv[2], requested_length);
 
   if (!enif_alloc_binary(requested_length, &data_out)) {
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "generate_random");
   }
   P11_debug("Allocated memory for data_out: %lu bytes at %p", data_out.size, data_out.data);
   secure_zero(data_out.data, data_out.size);
@@ -2918,9 +2881,7 @@ static ERL_NIF_TERM list_mechanisms(ErlNifEnv* env, int argc, const ERL_NIF_TERM
 
   mechanism_list = (CK_MECHANISM_TYPE_PTR) calloc(mechanism_count, sizeof(CK_MECHANISM_TYPE));
   if (mechanism_list == NULL) {
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "list_mechanisms");
   }
 
   P11_call(rv, p11_module, C_GetMechanismList, slot_id, mechanism_list, &mechanism_count);
@@ -3069,9 +3030,7 @@ static ERL_NIF_TERM sign(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
   P11_debug("sign: C_Sign expected output size: %lu", res_len1);
 
   if (!enif_alloc_binary(res_len1, &data_out)) {
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "sign");
   }
 
   secure_zero(data_out.data, data_out.size);
@@ -3157,9 +3116,7 @@ static ERL_NIF_TERM sign_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
   P11_debug("sign_final: C_SignFinal expected output size: %lu", expected_res_len);
 
   if (!enif_alloc_binary(expected_res_len, &data_out)) {
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "sign_final");
   }
   secure_zero(data_out.data, data_out.size);
 
@@ -3365,9 +3322,7 @@ static ERL_NIF_TERM digest(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) 
   P11_debug("digest: C_Digest expected output size: %lu", expected_res_len);
   
   if (!enif_alloc_binary(expected_res_len, &data_out)) {
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "digest");
   }
   
   secure_zero(data_out.data, data_out.size);
@@ -3455,9 +3410,7 @@ static ERL_NIF_TERM digest_final(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
   P11_debug("digest_final: C_DigestFinal expected output size: %lu", expected_res_len);
 
   if (!enif_alloc_binary(expected_res_len, &data_out)) {
-    return enif_make_tuple2(env, 
-      enif_make_atom(env, "error"), 
-      enif_make_atom(env, "memory_allocation_failed"));
+    return P11_memory_error(env, "digest_final");
   }
   secure_zero(data_out.data, data_out.size);
 
