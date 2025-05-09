@@ -186,10 +186,6 @@ defmodule P11ex.Lib do
     def new(handle) when is_integer(handle) and handle >= 0 do
       %__MODULE__{session: nil, handle: handle}
     end
-
-    def new(_, _) do
-      raise ArgumentError, "handle must be a number"
-    end
   end
 
   defmodule ObjectAttributes do
@@ -537,10 +533,8 @@ defmodule P11ex.Lib do
     |> Map.new()
   end
 
-  @doc """
-  This is a helper function that parses the list of attributes returned by `n_get_object_attributes/4`
-  and returns a map of valid attributes and a list of errors.
-  """
+  # This is a helper function that parses the list of attributes returned by `n_get_object_attributes/4`
+  # and returns a map of valid attributes and a list of errors.
   @spec split_attributes(list(attribute())) :: {map(), list()}
   defp split_attributes(lst) do
     Enum.reduce(lst, {Map.new(), []}, fn a, {ok_set, err_set}  ->
@@ -1034,215 +1028,184 @@ defmodule P11ex.Lib do
 
   defp n_load_module(_path) do
     # This function will be implemented in NIF
-    raise "NIF load_module/1 not implemented"
+    :erlang.nif_error("NIF load_module/1 not implemented")
   end
 
   defp n_list_slots(_p11_module, _token_present) do
     # This function will be implemented in NIF
-    raise "NIF list_slots/1 not implemented"
+    :erlang.nif_error("NIF list_slots/1 not implemented")
   end
 
   defp n_token_info(_p11_module, _slot_id) do
     # This function will be implemented in NIF
-    raise "NIF token_info/1 not implemented"
+    :erlang.nif_error("NIF token_info/1 not implemented")
   end
 
   defp n_finalize(_p11_module) do
     # This function will be implemented in NIF
-    raise "NIF finalize/1 not implemented"
+    :erlang.nif_error("NIF finalize/1 not implemented")
   end
 
   defp n_open_session(_p11_module, _slot_id, _flags) do
     # This function will be implemented in NIF
-    raise "NIF open_session/1 not implemented"
+    :erlang.nif_error("NIF open_session/3 not implemented")
   end
 
   defp n_close_session(_p11_module, _session) do
     # This function will be implemented in NIF
-    raise "NIF close_session/1 not implemented"
+    :erlang.nif_error("NIF close_session/1 not implemented")
   end
 
   defp n_close_all_sessions(_p11_module, _slot_id) do
     # This function will be implemented in NIF
-    raise "NIF close_all_sessions/1 not implemented"
+    :erlang.nif_error("NIF close_all_sessions/1 not implemented")
   end
 
   defp n_session_info(_p11_module, _session) do
     # This function will be implemented in NIF
-    raise "NIF session_info/1 not implemented"
+    :erlang.nif_error("NIF session_info/1 not implemented")
   end
 
-  @spec n_session_login(reference(), non_neg_integer(), non_neg_integer(), charlist())
-    :: :ok | {:error, atom()} | {:error, atom(), any()}
   defp n_session_login(_p11_module, _session, _user_type, _pin) do
     # This function will be implemented in NIF
-    raise "NIF session_login/4 not implemented"
+    :erlang.nif_error("NIF session_login/4 not implemented")
   end
 
-  @spec n_session_logout(reference(), non_neg_integer())
-    :: :ok | {:error, atom()} | {:error, atom(), any()}
   defp n_session_logout(_p11_module, _session) do
     # This function will be implemented in NIF
-    raise "NIF session_logout/1 not implemented"
+    :erlang.nif_error("NIF session_logout/1 not implemented")
   end
 
   defp n_find_objects(_p11_module, _session, _mechanism, _key_template) do
     # This function will be implemented in NIF
-    raise "NIF find_objects/4 not implemented"
+    :erlang.nif_error("NIF find_objects/4 not implemented")
   end
 
   defp n_generate_key(_p11_module, _session, _mechanism, _key_template) do
     # This function will be implemented in NIF
-    raise "NIF generate_key/4 not implemented"
+    #raise "NIF generate_key/4 not implemented"
+    :erlang.nif_error("NIF generate_key/4 not implemented")
   end
 
   defp n_destroy_object(_p11_module, _session, _object) do
     # This function will be implemented in NIF
-    raise "NIF destroy_object/3 not implemented"
+    :erlang.nif_error("NIF destroy_object/3 not implemented")
   end
 
   defp n_list_mechanisms(_p11_module, _slot_id) do
     # This function will be implemented in NIF
-    raise "NIF list_mechanisms/2 not implemented"
+    :erlang.nif_error("NIF list_mechanisms/2 not implemented")
   end
 
   defp n_mechanism_info(_p11_module, _slot_id, _mechanism_type) do
     # This function will be implemented in NIF
-    raise "NIF mechanism_info/3 not implemented"
+    :erlang.nif_error("NIF mechanism_info/3 not implemented")
   end
 
   defp n_get_object_attributes(_p11_module, _session, _object, _attributes) do
     # This function will be implemented in NIF
-    raise "NIF get_object_attributes/4 not implemented"
+    :erlang.nif_error("NIF get_object_attributes/4 not implemented")
   end
 
-  @spec n_encrypt(reference(), non_neg_integer(), binary())
-    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_encrypt(_p11_module, _session, _data) do
     # This function will be implemented in NIF
-    raise "NIF encrypt/3 not implemented"
+    :erlang.nif_error("NIF encrypt/3 not implemented")
   end
 
-  @spec n_encrypt_init(reference(), non_neg_integer(), tuple(), non_neg_integer())
-    :: :ok | {:error, atom()} | {:error, atom(), any()}
   defp n_encrypt_init(_p11_module, _session, _mechanism, _data) do
     # This function will be implemented in NIF
-    raise "NIF encrypt_init/4 not implemented"
+    :erlang.nif_error("NIF encrypt_init/4 not implemented")
   end
 
-  @spec n_encrypt_update(reference(), non_neg_integer(), binary())
-    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_encrypt_update(_p11_module, _session, _data) do
     # This function will be implemented in NIF
-    raise "NIF encrypt_update/3 not implemented"
+    :erlang.nif_error("NIF encrypt_update/3 not implemented")
   end
 
-  @spec n_encrypt_final(reference(), non_neg_integer())
-    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_encrypt_final(_p11_module, _session) do
     # This function will be implemented in NIF
-    raise "NIF encrypt_final/2 not implemented"
+    :erlang.nif_error("NIF encrypt_final/2 not implemented")
   end
 
-  @spec n_decrypt(reference(), non_neg_integer(), binary())
-    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_decrypt(_p11_module, _session, _data) do
     # This function will be implemented in NIF
-    raise "NIF decrypt/3 not implemented"
+    :erlang.nif_error("NIF decrypt/3 not implemented")
   end
 
-  @spec n_decrypt_init(reference(), non_neg_integer(), tuple(), non_neg_integer())
-    :: :ok | {:error, atom()} | {:error, atom(), any()}
   defp n_decrypt_init(_p11_module, _session, _mechanism, _data) do
     # This function will be implemented in NIF
-    raise "NIF decrypt_init/4 not implemented"
+    :erlang.nif_error("NIF decrypt_init/4 not implemented")
   end
 
-  @spec n_decrypt_update(reference(), non_neg_integer(), binary())
-    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_decrypt_update(_p11_module, _session, _data) do
     # This function will be implemented in NIF
-    raise "NIF decrypt_update/3 not implemented"
+    :erlang.nif_error("NIF decrypt_update/3 not implemented")
   end
 
-  @spec n_decrypt_final(reference(), non_neg_integer())
-    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_decrypt_final(_p11_module, _session) do
     # This function will be implemented in NIF
-    raise "NIF decrypt_final/2 not implemented"
+    :erlang.nif_error("NIF decrypt_final/2 not implemented")
   end
 
   defp n_generate_random(_p11_module, _session, _requested_length) do
     # This function will be implemented in NIF
-    raise "NIF generate_random/3 not implemented"
+    :erlang.nif_error("NIF generate_random/3 not implemented")
   end
 
-  @spec n_sign_init(reference(), non_neg_integer(), tuple(), non_neg_integer())
-    :: :ok | {:error, atom()} | {:error, atom(), any()}
   defp n_sign_init(_p11_module, _session, _mechanism, _key) do
     # This function will be implemented in NIF
-    raise "NIF sign_init/4 not implemented"
+    :erlang.nif_error("NIF sign_init/4 not implemented")
   end
 
-  @spec n_sign(reference(), non_neg_integer(), binary())
-    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_sign(_p11_module, _session, _data) do
     # This function will be implemented in NIF
-    raise "NIF sign/5 not implemented"
+    :erlang.nif_error("NIF sign/5 not implemented")
   end
 
-  @spec n_sign_update(reference(), non_neg_integer(), binary())
-    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_sign_update(_p11_module, _session, _data) do
     # This function will be implemented in NIF
-    raise "NIF sign_update/3 not implemented"
+    :erlang.nif_error("NIF sign_update/3 not implemented")
   end
 
-  @spec n_sign_final(reference(), non_neg_integer())
-    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
   defp n_sign_final(_p11_module, _session) do
     # This function will be implemented in NIF
-    raise "NIF sign_final/2 not implemented"
+    :erlang.nif_error("NIF sign_final/2 not implemented")
   end
 
-  @spec n_verify_init(reference(), non_neg_integer(), tuple(), non_neg_integer())
-    :: :ok | {:error, atom()} | {:error, atom(), any()}
   defp n_verify_init(_p11_module, _session, _mechanism, _key) do
     # This function will be implemented in NIF
-    raise "NIF verify_init/4 not implemented"
+    :erlang.nif_error("NIF verify_init/4 not implemented")
   end
 
-  @spec n_verify(reference(), non_neg_integer(), binary(), binary())
-    :: :ok | {:error, atom()} | {:error, atom(), any()}
   defp n_verify(_p11_module, _session, _data, _signature) do
     # This function will be implemented in NIF
-    raise "NIF verify/4 not implemented"
+    :erlang.nif_error("NIF verify/4 not implemented")
   end
 
   defp n_digest_init(_p11_module, _session, _mechanism) do
     # This function will be implemented in NIF
-    raise "NIF digest_init/3 not implemented"
+    :erlang.nif_error("NIF digest_init/3 not implemented")
   end
 
   defp n_digest_update(_p11_module, _session, _data) do
     # This function will be implemented in NIF
-    raise "NIF digest_update/3 not implemented"
+    :erlang.nif_error("NIF digest_update/3 not implemented")
   end
 
   defp n_digest_final(_p11_module, _session) do
     # This function will be implemented in NIF
-    raise "NIF digest_final/2 not implemented"
+    :erlang.nif_error("NIF digest_final/2 not implemented")
   end
 
   defp n_digest(_p11_module, _session, _data) do
     # This function will be implemented in NIF
-    raise "NIF digest/2 not implemented"
+    :erlang.nif_error("NIF digest/2 not implemented")
   end
 
   defp n_generate_key_pair(_p11_module, _session, _mechanism,
     _pub_key_template, _priv_key_template) do
     # This function will be implemented in NIF
-    raise "NIF generate_key_pair/5 not implemented"
+    :erlang.nif_error("NIF generate_key_pair/5 not implemented")
   end
 
 end
