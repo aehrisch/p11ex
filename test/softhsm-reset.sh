@@ -37,6 +37,7 @@ ${SOFTHSM_PREFIX}/bin/softhsm2-util --show-slots
 
 ${P11TOOL_PREFIX}/bin/pkcs11-tool --module ${PKCS11_MODULE} --list-mechanisms
 
+echo
 echo "### Generating AES keys"
 ${P11TOOL_PREFIX}/bin/pkcs11-tool --module ${PKCS11_MODULE} \
   --login --pin ${PKCS11_TOKEN_PIN} --token ${PKCS11_TOKEN_LABEL} \
@@ -53,6 +54,7 @@ ${P11TOOL_PREFIX}/bin/pkcs11-tool --module ${PKCS11_MODULE} \
   --keygen --label "aes_256" --id 12 \
   --key-type AES:32
 
+echo
 echo "### Listing objects"
 ${P11TOOL_PREFIX}/bin/pkcs11-tool --module ${PKCS11_MODULE} --token ${PKCS11_TOKEN_LABEL} \
   --login --pin ${PKCS11_TOKEN_PIN} \

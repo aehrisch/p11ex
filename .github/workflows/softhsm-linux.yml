@@ -33,6 +33,7 @@ jobs:
             -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
             -e MIX_ENV=test \
             -e GITHUB_EVENT_PATH=/github/event.json \
+            -e SOFTHSM2_CONF=$(mktemp) \
             -v ${{ github.workspace }}:/app \
             -v ${{ github.event_path }}:/github/event.json \
             ghcr.io/${{ github.repository }}/p11ex-test:latest \
@@ -89,6 +90,7 @@ jobs:
             -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
             -e MIX_ENV=test \
             -e GITHUB_EVENT_PATH=/github/event.json \
+            -e SOFTHSM2_CONF=$(mktemp) \
             -v ${{ github.workspace }}:/app \
             -v ${{ github.event_path }}:/github/event.json \
             ghcr.io/${{ github.repository }}/p11ex-test:latest \

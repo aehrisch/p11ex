@@ -78,6 +78,7 @@ jobs:
               PKCS11_MODULE=${{ github.workspace }}/softhsm/lib/softhsm/libsofthsm2.so \
               P11TOOL_PREFIX=/opt/homebrew \
               MAKE_TOKEN_DIR=yes \
+              SOFTHSM2_CONF=$(mktemp) \
             bash -x test/softhsm-reset.sh
 
       - name: Mix test

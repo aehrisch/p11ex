@@ -74,7 +74,7 @@ defmodule P11exRSATestHelper do
       {:cka_encrypt, true},
       {:cka_verify, true},
       {:cka_modulus_bits, 2048},
-      {:cka_public_exponent, 65537},
+      {:cka_public_exponent, 65_537},
       {:cka_label, "rsa_test_key"}
     ]
 

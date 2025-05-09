@@ -2,8 +2,6 @@ defmodule P11ex.ChunksTest do
 
   use ExUnit.Case, async: false
 
-  alias P11ex.Lib, as: Lib
-  alias P11ex.Module, as: Module
   alias P11ex.Session, as: Session
 
   setup_all do
