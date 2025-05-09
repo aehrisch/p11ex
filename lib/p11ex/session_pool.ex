@@ -27,6 +27,6 @@ defmodule P11ex.SessionPoolSupervisor do
         [module: P11ex.Module, slot_id: slot_id, flags: flags])
     ]
 
-    supervise(children, strategy: :one_for_one)
+    Supervisor.init(children, strategy: :one_for_one)
   end
 end

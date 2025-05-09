@@ -447,13 +447,9 @@ defmodule P11ex.Lib do
     :cka_coefficient,
     :cka_public_exponent])
 
-  defp encode_bigint_attribute(attrib) do
-    case attrib do
-      {name, value} when is_atom(name) and is_integer(value) ->
-        {:ok, {name, :binary.encode_unsigned(value)}}
-      err ->
-        {:error, :invalid_attribute_tuple, attrib}
-    end
+  defp encode_bigint_attribute({name, value})
+    when is_atom(name) and is_integer(value) do
+      {:ok, {name, :binary.encode_unsigned(value)}}
   end
 
   defp pre_convert_attribute({name, _} = attrib) do
@@ -467,7 +463,7 @@ defmodule P11ex.Lib do
   defp process_attributes(attributes) when is_list(attributes) do
     attributes
     |> Enum.map(fn a -> pre_convert_attribute(a) end)
-    |> Enum.reduce({:ok, []}, fn a, {ok, acc} ->
+    |> Enum.reduce({:ok, []}, fn a, {:ok, acc} ->
       case a do
         {:ok, {n, value}} -> {:ok, [{n, value} | acc]}
         {:error, err} -> {:error, err}
