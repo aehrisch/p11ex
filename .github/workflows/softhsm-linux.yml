@@ -33,11 +33,12 @@ jobs:
             -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
             -e MIX_ENV=test \
             -e GITHUB_EVENT_PATH=/github/event.json \
-            -e SOFTHSM2_CONF=$(mktemp) \
             -v ${{ github.workspace }}:/app \
             -v ${{ github.event_path }}:/github/event.json \
             ghcr.io/${{ github.repository }}/p11ex-test:latest \
             sh -c "cd /app && \
+              export SOFTHSM2_CONF=$(mktemp) && \
+              export MAKE_TOKEN_DIR=yes && \
               sh test/softhsm-reset.sh && \
               cd c_src && \
               curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h && \
@@ -90,11 +91,12 @@ jobs:
             -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
             -e MIX_ENV=test \
             -e GITHUB_EVENT_PATH=/github/event.json \
-            -e SOFTHSM2_CONF=$(mktemp) \
             -v ${{ github.workspace }}:/app \
             -v ${{ github.event_path }}:/github/event.json \
             ghcr.io/${{ github.repository }}/p11ex-test:latest \
             sh -c "cd /app && \
+              export SOFTHSM2_CONF=$(mktemp) && \
+              export MAKE_TOKEN_DIR=yes && \
               sh test/softhsm-reset.sh && \
               cd c_src && \
               curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h && \
