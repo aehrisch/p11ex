@@ -8,7 +8,7 @@ defmodule P11ExTest.RsaGenKey do
 
   @moduletag :rsa
   @moduletag :softhsm
-  
+
   setup_all do
     P11ex.TestHelper.setup_session()
   end
@@ -23,7 +23,7 @@ defmodule P11ExTest.RsaGenKey do
       {:cka_encrypt, true},
       {:cka_verify, true},
       {:cka_modulus_bits, 2048},
-      {:cka_public_exponent, 65537},
+      {:cka_public_exponent, 65_537},
       {:cka_label, "rsa_test_key"}
     ]
 
@@ -58,7 +58,7 @@ defmodule P11ExTest.RsaGenKey do
     assert pubk_attribs[:cka_key_type] == :ckk_rsa
     assert pubk_attribs[:cka_label] == "rsa_test_key"
     assert pubk_attribs[:cka_modulus_bits] == 2048
-    assert pubk_attribs[:cka_public_exponent] == 65537
+    assert pubk_attribs[:cka_public_exponent] == 65_537
     assert pubk_attribs[:cka_token] == false
     assert pubk_attribs[:cka_encrypt] == true
     assert pubk_attribs[:cka_verify] == true
