@@ -9,8 +9,6 @@ defmodule P11ex.MechanismInfoTest do
   SoftHSM 2.6.1.
   """
 
-  alias P11ex.Module, as: Module
-
   setup_all do
     {:ok, %{slot: slot}} = P11ex.TestHelper.find_slot()
     {:ok, %{slot: slot}}

@@ -3,7 +3,6 @@ defmodule P11ExTest.RsaGenKey do
   use ExUnit.Case, async: false
 
   alias P11ex.Lib, as: Lib
-  alias P11ex.Module, as: Module
   alias P11ex.Session, as: Session
 
   @moduletag :rsa
