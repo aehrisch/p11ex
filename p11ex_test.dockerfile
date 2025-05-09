@@ -13,7 +13,10 @@ RUN apt-get install -y \
     softhsm2 ykcs11 \
     locales \
     && locale-gen en_US.UTF-8 \
-    && update-locale LANG=en_US.UTF-8
+    && update-locale LANG=en_US.UTF-8 \
+    && dpkg-query -L ykcs11
+
+
 
 ENV ASDF_VERSION=v0.16.2 \
     LANG=en_US.UTF-8 \
