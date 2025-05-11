@@ -47,9 +47,7 @@ RUN apt-get install -y \
     libncurses-dev \
     openjdk-11-jdk \
     opensc \
-    opensc-pkcs11 \
-    gcc-aarch64-linux-gnu \
-    g++-aarch64-linux-gnu
+    opensc-pkcs11
 
 ENV PKCS11SPY=/usr/lib/softhsm/libsofthsm2.so 
 # ENV PKCS11SPY_OUTPUT=/tmp/pkcs11spy.log
