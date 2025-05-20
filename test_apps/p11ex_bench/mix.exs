@@ -21,9 +21,15 @@ defmodule P11ExBench.MixProject do
   defp deps do
     [
       {:p11ex, path: "../.."},
+
       {:plug_cowboy, "~> 2.6"},
       {:jason, "~> 1.4"},
-      {:poolboy, "~> 1.5.2"}
+      {:poolboy, "~> 1.5.2"},
+
+      {:telemetry, "~> 1.3.0"},
+      {:telemetry_metrics, "~> 1.1.0"},
+      {:prometheus_telemetry, "~> 0.4.0"}
+
     ]
   end
 end

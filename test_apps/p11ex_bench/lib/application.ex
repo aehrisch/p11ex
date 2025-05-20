@@ -5,8 +5,17 @@ defmodule P11exBench.Application do
   def start(_type, _args) do
 
     children = [
+      {PrometheusTelemetry,
+        exporter: [enabled?: true],
+        metrics: [
+          PrometheusTelemetry.Metrics.VM.metrics(),
+          PrometheusTelemetry.Metrics.Cowboy.metrics()
+        ]
+      },
+
       {Plug.Cowboy, scheme: :http, plug: P11exBench.Router, options: [port: 4000]},
-      {P11ex.Module, "/opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"}
+      {P11ex.Module, "/Users/eric/hack/softhsm/lib/softhsm/libsofthsm2.so"}
+      #{P11ex.Module, "/opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"}
     ]
 
     opts = [strategy: :one_for_one, name: P11ExBench.Supervisor]
