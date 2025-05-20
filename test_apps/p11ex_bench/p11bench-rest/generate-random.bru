@@ -1,0 +1,11 @@
+meta {
+  name: generate-random
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://{{host}}:{{port}}/crypto/random
+  body: none
+  auth: inherit
+}
