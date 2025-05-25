@@ -17,7 +17,6 @@ defmodule P11exBench.Controllers.General do
     end
   end
 
-
   def generate_random(conn) do
     :poolboy.transaction(P11exBench.SessionPool, fn session ->
       Session.generate_random(session, 10)

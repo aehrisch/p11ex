@@ -1,9 +1,9 @@
 defmodule P11exBench.Application do
+  @moduledoc false
   use Application
 
   @impl true
   def start(_type, _args) do
-
     children = [
       {PrometheusTelemetry,
         exporter: [enabled?: true],
@@ -12,7 +12,6 @@ defmodule P11exBench.Application do
           PrometheusTelemetry.Metrics.Cowboy.metrics()
         ]
       },
-
       {Plug.Cowboy, scheme: :http, plug: P11exBench.Router, options: [port: 4000]},
       {P11ex.Module, "/Users/eric/hack/softhsm/lib/softhsm/libsofthsm2.so"}
       #{P11ex.Module, "/opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"}
