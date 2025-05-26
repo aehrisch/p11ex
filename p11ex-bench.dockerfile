@@ -1,5 +1,5 @@
 # Use the official Elixir image as base
-FROM elixir:1.18.3-slim
+FROM elixir:1.18.4-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
