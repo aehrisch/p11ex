@@ -90,7 +90,7 @@ defmodule P11ex.Lib do
       flags: flags()
     }
 
-    @enforce_keys [:module, :slot_id, :description, :manufacturer_id, :hardware_version, :firmware_version, :flags]
+    @enforce_keys [:module, :slot_id]
     defstruct [:module, :slot_id, :description, :manufacturer_id, :hardware_version, :firmware_version, :flags]
   end
 

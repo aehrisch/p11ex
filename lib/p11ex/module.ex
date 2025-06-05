@@ -82,6 +82,16 @@ defmodule P11ex.Module do
   end
 
   @doc """
+  Get information about a token in the slot with the given slot ID. The token information
+  is based on the PKCS#11 structure `CK_TOKEN_INFO`. See `token_info/1` for
+  more information
+  """
+  @spec token_info(non_neg_integer()) :: {:ok, map()} | {:error, atom()}
+  def token_info(slot_id) when is_integer(slot_id) do
+    GenServer.call(__MODULE__, {:token_info, %Slot{module: self(), slot_id: slot_id}})
+  end
+
+  @doc """
   Get information about a token in a slot. The token information is based on the
   PKCS#11 structure `CK_TOKEN_INFO` and contains the following fields:
 
@@ -107,6 +117,15 @@ defmodule P11ex.Module do
   @spec token_info(Slot.t()) :: {:ok, map()} | {:error, atom()}
   def token_info(%Slot{} = slot) do
     GenServer.call(__MODULE__, {:token_info, slot})
+  end
+
+  @doc """
+  List all mechanisms supported by the PKCS#11 module for the slot with the given slot ID.
+  See `list_mechanisms/1` for more information.
+  """
+  @spec list_mechanisms(non_neg_integer()) :: {:ok, list(atom() | non_neg_integer())} | {:error, atom()}
+  def list_mechanisms(slot_id) when is_integer(slot_id) do
+    GenServer.call(__MODULE__, {:list_mechanisms, %Slot{module: self(), slot_id: slot_id}})
   end
 
   @doc """
