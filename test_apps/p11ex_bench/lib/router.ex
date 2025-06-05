@@ -28,6 +28,35 @@ defmodule P11exBench.Router do
     end
   end
 
+  get "/token/:slot_id/info" do
+    case P11ex.Module.token_info(String.to_integer(slot_id)) do
+      {:ok, token_info} ->
+        IO.inspect(token_info, label: "token_info")
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(200, Jason.encode!(%{token_info: token_info}))
+      {:error, reason} ->
+        Logger.error("Error getting token info: #{inspect(reason)}")
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(500, Jason.encode!(%{error: reason}))
+    end
+  end
+
+  get "/token/:slot_id/mechanisms" do
+    case P11ex.Module.list_mechanisms(String.to_integer(slot_id)) do
+      {:ok, mechanisms} ->
+        IO.inspect(mechanisms, label: "mechanisms")
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(200, Jason.encode!(%{mechanisms: mechanisms}))
+      {:error, reason} ->
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(500, Jason.encode!(%{error: reason}))
+    end
+  end
+
   get "/crypto/random" do
     case P11exBench.Controllers.General.generate_random(conn) do
       {:ok, random} ->
