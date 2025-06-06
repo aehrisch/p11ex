@@ -372,6 +372,7 @@ defmodule P11ex.Lib do
         |> Map.replace_lazy(:model, fn desc -> frob_fixedlen_string(desc) end)
         |> Map.replace_lazy(:serial_number, fn serial -> frob_fixedlen_string(serial) end)
         |> Map.replace_lazy(:label, fn label -> frob_fixedlen_string(label) end)
+        |> Map.replace_lazy(:utc_time, fn utc_time -> frob_utc_date_str(utc_time) end)
       {:ok, token_info}
     end
   end
@@ -1014,6 +1015,13 @@ defmodule P11ex.Lib do
   # trailing blanks.
   defp frob_fixedlen_string(char_list) when is_list(char_list) do
     char_list |> List.to_string() |> String.trim_trailing()
+  end
+
+  defp frob_utc_date_str(char_list) when is_list(char_list) do
+    case String.trim(List.to_string(char_list)) do
+      "" -> nil
+      s -> s
+    end
   end
 
   #    _   _ ___ _____   _____                 _   _
