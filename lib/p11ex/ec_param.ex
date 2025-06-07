@@ -14,6 +14,14 @@ defmodule P11ex.ECParam do
   ]
 
   @doc """
+  List of named curves supported by the library.
+  """
+  @spec named_curves() :: list(atom())
+  def named_curves do
+    Enum.map(@named_curves, fn {name, _} -> name end)
+  end
+
+  @doc """
   Encode ECParameters for a named curve. ECParameters is a
   DER-encoded ASN.1 structure that identifies a named curve and
   can be used as a value for the `cka_ec_params` attribute of
