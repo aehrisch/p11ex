@@ -68,6 +68,7 @@ defmodule P11exTest.ECGenKey do
       assert pubk_attribs.cka_wrap == true
       assert pubk_attribs.cka_id == key_id
       assert pubk_attribs.cka_class == :cko_public_key
+      assert pubk_attribs.cka_key_type == :ckk_ecdsa
       assert pubk_attribs.cka_ec_params == params
 
       assert is_map(prvk_attribs)
@@ -76,6 +77,8 @@ defmodule P11exTest.ECGenKey do
       assert prvk_attribs.cka_decrypt == true
       assert prvk_attribs.cka_sign == true
       assert prvk_attribs.cka_decrypt == true
+      assert prvk_attribs.cka_class == :cko_private_key
+      assert prvk_attribs.cka_key_type == :ckk_ecdsa
       assert prvk_attribs.cka_ec_params == params
 
       Session.destroy_object(context.session_pid, pubk)
