@@ -257,6 +257,15 @@ defmodule P11ex.Lib do
     end
 
     @doc """
+    Attributes that can be found on EC public keys.
+    """
+    @spec ec_public_key() :: MapSet.t(atom())
+    def ec_public_key do
+      MapSet.union(public_key(),
+        MapSet.new([:cka_ec_params, :cka_ec_point]))
+    end
+
+    @doc """
     Attributes that can be found on private keys.
     """
     @spec private_key() :: MapSet.t(atom())
@@ -286,6 +295,15 @@ defmodule P11ex.Lib do
           :cka_modulus,
           :cka_public_exponent
         ]))
+    end
+
+    @doc """
+    Attributes that can be found on EC private keys.
+    """
+    @spec ec_private_key() :: MapSet.t(atom())
+    def ec_private_key do
+      MapSet.union(private_key(),
+        MapSet.new([:cka_ec_params]))
     end
 
     @doc """
