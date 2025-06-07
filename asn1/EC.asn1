@@ -1,0 +1,8 @@
+EC DEFINITIONS ::=
+BEGIN
+
+  ECParameters ::= CHOICE {
+    namedCurve         OBJECT IDENTIFIER
+  }
+
+END

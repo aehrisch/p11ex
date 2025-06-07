@@ -19,4 +19,5 @@ softhsm2.conf
 softhsm-conf.path
 test_apps/*/_build
 test_apps/*/deps
-src/EC.asn1
+src/*.erl
+src/*.asn1db

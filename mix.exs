@@ -16,16 +16,20 @@ defmodule P11ex.MixProject do
         "coveralls.html": :test,
         "coveralls.github": :test
       ],
-      compilers: [:elixir_make] ++ Mix.compilers(),
+      erlc_paths: ["src"],
+      asn1_options: asn1_options(),
+      compilers: [:asn1, :elixir_make] ++ Mix.compilers(),
       make_clean: ["clean"],
       make_targets: ["all"]
     ]
   end
 
+  defp asn1_options, do: [maps: true, der: true, jer: false, verbose: true]
+
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger, :asn1]
     ]
   end
 
@@ -35,6 +39,7 @@ defmodule P11ex.MixProject do
       {:poolboy, "~> 1.5.2"},
 
       {:elixir_make, "~> 0.7", runtime: false},
+      {:asn1_compiler, "~> 0.1", runtime: false},
 
       {:junit_formatter, "~> 3.3", only: :test},
       {:excoveralls, "~> 0.18", only: :test},
