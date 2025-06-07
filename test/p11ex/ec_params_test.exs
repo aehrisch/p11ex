@@ -26,4 +26,12 @@ defmodule P11ex.ECParamsTest do
       end)
   end
 
+  test "encode ECParameters from named curve" do
+    @curves
+      |> Enum.each(fn {name, oid, der} ->
+          assert {:ok, params} = P11ex.ECParam.ec_params_from_named_curve(name)
+          assert params == der
+      end)
+  end
+
 end

@@ -516,6 +516,9 @@ static const mechanism_map_t mechanism_map[] = {
     /* Other algorithms */  
     {"ckm_generic_secret_key_gen", CKM_GENERIC_SECRET_KEY_GEN},
 
+    /* Elliptic Curve algorithms */
+    {"ckm_ec_key_pair_gen", CKM_EC_KEY_PAIR_GEN},
+
     {NULL, 0}
 };
 
