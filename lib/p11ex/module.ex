@@ -27,7 +27,6 @@ defmodule P11ex.Module do
       Supervisor.init(children, strategy: :one_for_one)
     end
   end
-  ```
   """
 
   use GenServer
@@ -82,18 +81,12 @@ defmodule P11ex.Module do
   end
 
   @doc """
-  Get information about a token in the slot with the given slot ID. The token information
-  is based on the PKCS#11 structure `CK_TOKEN_INFO`. See `token_info/1` for
-  more information
-  """
-  @spec token_info(non_neg_integer()) :: {:ok, map()} | {:error, atom()}
-  def token_info(slot_id) when is_integer(slot_id) do
-    GenServer.call(__MODULE__, {:token_info, %Slot{module: self(), slot_id: slot_id}})
-  end
+  Get information about a token in a slot. This function has two variants:
 
-  @doc """
-  Get information about a token in a slot. The token information is based on the
-  PKCS#11 structure `CK_TOKEN_INFO` and contains the following fields:
+  1. `token_info(slot_id)` - Get token info using a slot ID
+  2. `token_info(slot)` - Get token info using a Slot struct
+
+  The token information is based on the PKCS#11 structure `CK_TOKEN_INFO` and contains the following fields:
 
   * `label` - The label of the token (a string)
   * `manufacturer_id` - The manufacturer ID of the token (a string)
@@ -114,25 +107,30 @@ defmodule P11ex.Module do
   * `firmware_version` - The firmware version of the token (a tuple of integers)
   * `utc_time` - The UTC time of the token (a string)
   """
+  @spec token_info(non_neg_integer()) :: {:ok, map()} | {:error, atom()}
+  def token_info(slot_id) when is_integer(slot_id) do
+    GenServer.call(__MODULE__, {:token_info, %Slot{module: self(), slot_id: slot_id}})
+  end
+
   @spec token_info(Slot.t()) :: {:ok, map()} | {:error, atom()}
   def token_info(%Slot{} = slot) do
     GenServer.call(__MODULE__, {:token_info, slot})
   end
 
   @doc """
-  List all mechanisms supported by the PKCS#11 module for the slot with the given slot ID.
-  See `list_mechanisms/1` for more information.
+  List all mechanisms supported by the PKCS#11 module for a slot. This function has two variants:
+
+  1. `list_mechanisms(slot_id)` - List mechanisms using a slot ID
+  2. `list_mechanisms(slot)` - List mechanisms using a Slot struct
+
+  The mechanisms are returned as a list of atoms. If the mechanism is not known to P11ex
+  (e.g. a vendor specific mechanism), it will be returned as an integer.
   """
   @spec list_mechanisms(non_neg_integer()) :: {:ok, list(atom() | non_neg_integer())} | {:error, atom()}
   def list_mechanisms(slot_id) when is_integer(slot_id) do
     GenServer.call(__MODULE__, {:list_mechanisms, %Slot{module: self(), slot_id: slot_id}})
   end
 
-  @doc """
-  List all mechanisms supported by the PKCS#11 module for a given slot. The mechanisms
-  are returned as a list of atoms. If the mechanism is not known to P11ex (e.g. a vendor
-  specific mechanism), it will be returned as an integer.
-  """
   @spec list_mechanisms(Slot.t()) :: {:ok, list(atom() | non_neg_integer())} | {:error, atom()}
   def list_mechanisms(slot) do
     GenServer.call(__MODULE__, {:list_mechanisms, slot})
