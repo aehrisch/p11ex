@@ -24,7 +24,7 @@ jobs:
 
       - name: Pull latest test image
         run: |
-          docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest
 
       - name: Run release process in Docker
         env:
@@ -36,7 +36,7 @@ jobs:
             -e GITHUB_TOKEN \
             -e MIX_ENV=prod \
             -v ${{ github.workspace }}:/app \
-            ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
+            ghcr.io/${{ github.repository }}/p11ex-test:latest \
             sh -c "cd /app && \
               export SOFTHSM2_CONF=$(mktemp) && \
               export MAKE_TOKEN_DIR=yes && \
@@ -51,11 +51,9 @@ jobs:
               mix local.hex --force && \
               mix deps.get && \
               mix deps.compile && \
-              # Build NIF
-              make clean && \
-              make && \
+              mix compile && \
               # Run tests
-              mix test && \
+              mix test --exclude yubikey && \
               # Run credo
               mix credo && \
               # Setup git_ops and generate changelog
