@@ -1,4 +1,4 @@
-defmodule P11ExTest.RsaSign do
+defmodule P11exTest.RsaSign do
 
   use ExUnit.Case, async: false
 

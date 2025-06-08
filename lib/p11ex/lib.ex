@@ -654,6 +654,35 @@ defmodule P11ex.Lib do
   params = %{iv: iv, tag_bits: 128}
   :ok = P11ex.Session.encrypt_init(session, {:ckm_aes_gcm, params}, key)
   ```
+
+  ### RSA with PKCS#1 v1.5
+
+  This mechanism requires a RSA public key and does not require any additional parameters.
+
+  ```elixir
+  :ok = P11ex.Session.encrypt_init(session, {:ckm_rsa_pkcs}, pub_key)
+  {:ok, ciphertext} = P11ex.Session.encrypt(session, data)
+  ```
+
+  ### RSA OAEP
+
+  This mechanism requires a RSA public key and the following parameters:
+
+  - `:hash_alg` - the hash algorithm to use.
+  - `:mgf_hash_alg` - the hash algorithm to use for the mask generation function.
+  - `:source_data` - the source data to use for the OAEP padding.
+
+  The `hash_alg` and `mgf_hash_alg` parameters identify an hash algorithm in the
+  same way as the `:crypto` module does. That is, possible values are `:sha`,
+  `:sha224`, `:sha256`, `:sha384`, and `:sha512`. Support depends on the token.
+
+  Example:
+
+  ```elixir
+  :ok = P11ex.Session.encrypt_init(session, {:ckm_rsa_pkcs_oaep, %{hash_alg: :sha, mgf_hash_alg: :sha, source_data: source_data}}, pub_key)
+  {:ok, ciphertext} = P11ex.Session.encrypt(session, data)
+  ```
+
   """
   @spec encrypt_init(SessionHandle.t(), mechanism_instance(), ObjectHandle.t())
     :: :ok | {:error, atom()} | {:error, atom(), any()}

@@ -1799,10 +1799,8 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
       mechanism->ulParameterLen = sizeof(CK_GCM_PARAMS);
       P11_debug("set_mechanism_parameters_from_term: CKM_AES_GCM params=%p, iv_ptr=%p, iv_len=%x, aad_ptr=%p, aad_len=%x, tag_bits=%d", 
         params, iv_ptr, iv_binary.size, aad_ptr, aad_binary.size, tag_bits);
-      #ifdef P11_DEBUG
-        print_buffer(params, param_size);
+      P11_debug_buffer(params, param_size);
       break;
-      #endif
     }
 
     case CKM_AES_OFB:
@@ -2051,6 +2049,98 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
       break;
     }
     
+    case CKM_RSA_PKCS_OAEP: {
+      ErlNifBinary source_data_binary;
+      ERL_NIF_TERM source_data_term, hash_alg_term, mgf_hash_alg_term;
+      CK_RSA_PKCS_OAEP_PARAMS *params = NULL;
+      CK_BYTE_PTR data_ptr = NULL;
+      size_t param_size = 0, source_data_size = 0;
+
+      if (!enif_get_map_value(env, map, enif_make_atom(env, "hash_alg"), &hash_alg_term)
+          || !enif_is_atom(env, hash_alg_term)) {
+        return enif_make_tuple3(env, 
+          enif_make_atom(env, "error"), 
+          enif_make_atom(env, "invalid_hash_alg_parameter"), hash_alg_term);
+      }
+
+      if (!enif_get_map_value(env, map, enif_make_atom(env, "mgf_hash_alg"), &mgf_hash_alg_term)
+          || !enif_is_atom(env, mgf_hash_alg_term)) {
+        return enif_make_tuple3(env, 
+          enif_make_atom(env, "error"), 
+          enif_make_atom(env, "invalid_mgf_hash_alg_parameter"), mgf_hash_alg_term);
+      }
+
+      if (enif_get_map_value(env, map, enif_make_atom(env, "source_data"), &source_data_term)) {
+        if (enif_is_binary(env, source_data_term)) {
+          enif_inspect_binary(env, source_data_term, &source_data_binary);
+          source_data_size = source_data_binary.size;
+        } else {
+          return enif_make_tuple3(env, 
+            enif_make_atom(env, "error"), 
+            enif_make_atom(env, "invalid_source_data_parameter"), source_data_term);
+        }
+      }
+
+      P11_debug("set_mechanism_parameters_from_term: CKM_RSA_OAEP source_data_binary.size=%lu", source_data_size);
+      param_size = sizeof(CK_RSA_PKCS_OAEP_PARAMS) + source_data_size;
+      params = (CK_RSA_PKCS_OAEP_PARAMS*) calloc(1, param_size);
+      if (params == NULL) {
+        return P11_memory_error(env, "set_mechanism_parameters_from_term");
+      }
+
+      if (hash_alg_term == enif_make_atom(env, "sha")) {
+        params->hashAlg = CKM_SHA_1;
+      } else if (hash_alg_term == enif_make_atom(env, "sha224")) {
+        params->hashAlg = CKM_SHA224;
+      } else if (hash_alg_term == enif_make_atom(env, "sha256")) {
+        params->hashAlg = CKM_SHA256;
+      } else if (hash_alg_term == enif_make_atom(env, "sha384")) {  
+        params->hashAlg = CKM_SHA384;
+      } else if (hash_alg_term == enif_make_atom(env, "sha512")) {
+        params->hashAlg = CKM_SHA512;
+      } else {
+        return enif_make_tuple3(env, 
+          enif_make_atom(env, "error"), 
+          enif_make_atom(env, "invalid_hash_alg_parameter"), hash_alg_term);
+      }
+
+      if (mgf_hash_alg_term == enif_make_atom(env, "sha")) {
+        params->mgf = CKG_MGF1_SHA1;
+      } else if (mgf_hash_alg_term == enif_make_atom(env, "sha224")) {
+        params->mgf = CKG_MGF1_SHA224;
+      } else if (mgf_hash_alg_term == enif_make_atom(env, "sha256")) {
+        params->mgf = CKG_MGF1_SHA256;
+      } else if (mgf_hash_alg_term == enif_make_atom(env, "sha384")) {
+        params->mgf = CKG_MGF1_SHA384;
+      } else if (mgf_hash_alg_term == enif_make_atom(env, "sha512")) {
+        params->mgf = CKG_MGF1_SHA512;
+      } else {
+        return enif_make_tuple3(env, 
+          enif_make_atom(env, "error"), 
+          enif_make_atom(env, "invalid_mgf_hash_alg_parameter"), mgf_hash_alg_term);
+      }
+
+      params->source = CKZ_DATA_SPECIFIED;
+      if (source_data_size > 0) {
+        data_ptr = (CK_BYTE_PTR) ((CK_BYTE_PTR) params + sizeof(CK_RSA_PKCS_OAEP_PARAMS));
+        params->pSourceData = data_ptr;
+        params->ulSourceDataLen = source_data_binary.size;
+        P11_debug("set_mechanism_parameters_from_term: CKM_RSA_OAEP param_ptr=%p, data_ptr=%p, source_data_size=%lu", 
+          params, data_ptr, source_data_size);
+        memcpy(data_ptr, source_data_binary.data, source_data_size);
+      } else {
+        params->pSourceData = NULL;
+        params->ulSourceDataLen = 0;
+        P11_debug("set_mechanism_parameters_from_term: CKM_RSA_OAEP, no source data");
+      }
+
+      mechanism->pParameter = params;
+      mechanism->ulParameterLen = param_size;
+      P11_debug_buffer(params, param_size);
+
+      break;
+    }
+
     default:
       return enif_make_tuple2(
         env,
