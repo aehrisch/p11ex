@@ -63,6 +63,31 @@ defmodule P11ex.TestHelper do
 
 end
 
+defmodule YubikeyTestHelper do
+
+  require Logger
+
+  def setup_session do
+    Logger.info("listing slots, searching for YubiKey")
+    {:ok, [slot]} = P11ex.Module.list_slots(true)
+    Logger.info("found slot #{slot.slot_id}")
+
+    {:ok, session_pid} = P11ex.Session.start_link([
+      module: P11ex.Module,
+      slot_id: slot.slot_id,
+      flags: [:rw_session, :serial_session]
+    ])
+
+    Logger.info("logging in to session pid=#{inspect(session_pid)}")
+    :ok = P11ex.Session.login(session_pid, :user, "123456")
+
+    {:ok, %{
+      slot: slot,
+      session_pid: session_pid
+    }}
+  end
+end
+
 defmodule P11exRSATestHelper do
 
   def gen_keypair(session_pid) do
