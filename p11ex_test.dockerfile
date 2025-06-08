@@ -15,7 +15,7 @@ RUN apt-get install -y \
     && locale-gen en_US.UTF-8 \
     && update-locale LANG=en_US.UTF-8
 
-ENV ASDF_VERSION=v0.16.2 \
+ENV ASDF_VERSION=v0.18.0 \
     LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8
 
