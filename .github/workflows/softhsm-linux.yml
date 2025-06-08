@@ -125,12 +125,11 @@ jobs:
           cd ${{ github.workspace }}
 
       - name: Setup SoftHSM2
-        env:
-          PKCS11_MODULE: /usr/local/lib/softhsm/libsofthsm2.so
-          SOFTHSM_PREFIX: /usr/local
         run: |
           export SOFTHSM2_CONF=$(mktemp)
           export MAKE_TOKEN_DIR=yes
+          export PKCS11_MODULE=/usr/local/lib/softhsm/libsofthsm2.so
+          export SOFTHSM_PREFIX=/usr/local
           
           sh test/softhsm-reset.sh
 
@@ -143,9 +142,8 @@ jobs:
           cd ..
 
       - name: Install dependencies and run tests
-        env:
-          PKCS11_MODULE: /usr/local/lib/softhsm/libsofthsm2.so
         run: |
+          export PKCS11_MODULE=/usr/local/lib/softhsm/libsofthsm2.so
           mix local.hex --force
           mix deps.get
           mix compile
