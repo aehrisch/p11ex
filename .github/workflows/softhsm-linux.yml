@@ -126,12 +126,11 @@ jobs:
 
       - name: Setup SoftHSM2
         run: |
-          export SOFTHSM2_CONF=$(mktemp)
-          export MAKE_TOKEN_DIR=yes
-          export PKCS11_MODULE=/usr/local/lib/softhsm/libsofthsm2.so
-          export SOFTHSM_PREFIX=/usr/local
-          
-          sh test/softhsm-reset.sh
+          env SOFTHSM2_CONF=$(mktemp)
+              MAKE_TOKEN_DIR=yes
+              PKCS11_MODULE=/usr/local/lib/softhsm/libsofthsm2.so
+              SOFTHSM_PREFIX=/usr/local
+            sh test/softhsm-reset.sh
 
       - name: Download PKCS#11 headers
         run: |
@@ -143,11 +142,10 @@ jobs:
 
       - name: Install dependencies and run tests
         run: |
-          export PKCS11_MODULE=/usr/local/lib/softhsm/libsofthsm2.so
           mix local.hex --force
           mix deps.get
           mix compile
-          mix test --cover --exclude yubikey
+          env PKCS11_MODULE=/usr/local/lib/softhsm/libsofthsm2.so mix test --cover --exclude yubikey
 
       - name: Upload test results and coverage (linux-arm64)
         uses: actions/upload-artifact@v4
