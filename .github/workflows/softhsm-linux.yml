@@ -127,6 +127,7 @@ jobs:
       - name: Setup SoftHSM2
         env:
           PKCS11_MODULE: /usr/local/lib/softhsm/libsofthsm2.so
+          SOFTHSM_PREFIX: /usr/local
         run: |
           export SOFTHSM2_CONF=$(mktemp)
           export MAKE_TOKEN_DIR=yes
