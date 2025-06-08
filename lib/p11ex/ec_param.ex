@@ -38,7 +38,7 @@ defmodule P11ex.ECParam do
   """
   @spec ec_params_from_named_curve(atom) :: {:ok, binary} | {:error, String.t}
   def ec_params_from_named_curve(name) do
-    case Enum.find(@named_curves, fn {n, oid} -> n == name end) do
+    case Enum.find(@named_curves, fn {n, _oid} -> n == name end) do
       nil -> {:error, "Unknown named curve: #{name}"}
       {_, oid} -> :EC.encode(:ECParameters, {:namedCurve, oid})
     end
