@@ -44,10 +44,10 @@ jobs:
 
       - name: Setup SoftHSM2
         run: |
-          env SOFTHSM2_CONF=$(mktemp)
-              MAKE_TOKEN_DIR=yes
-              PKCS11_MODULE=/usr/local/lib/softhsm/libsofthsm2.so
-              SOFTHSM_PREFIX=/usr/local
+          env SOFTHSM2_CONF=$(mktemp) \
+              MAKE_TOKEN_DIR=yes \
+              PKCS11_MODULE=/usr/local/lib/softhsm/libsofthsm2.so \
+              SOFTHSM_PREFIX=/usr/local \
             sh test/softhsm-reset.sh
 
       - name: Download PKCS#11 headers
@@ -128,10 +128,10 @@ jobs:
 
       - name: Setup SoftHSM2
         run: |
-          env SOFTHSM2_CONF=$(mktemp)
-              MAKE_TOKEN_DIR=yes
-              PKCS11_MODULE=/usr/local/lib/softhsm/libsofthsm2.so
-              SOFTHSM_PREFIX=/usr/local
+          env SOFTHSM2_CONF=$(mktemp) \
+              MAKE_TOKEN_DIR=yes \
+              PKCS11_MODULE=/usr/local/lib/softhsm/libsofthsm2.so \
+              SOFTHSM_PREFIX=/usr/local \
             sh test/softhsm-reset.sh
 
       - name: Download PKCS#11 headers
