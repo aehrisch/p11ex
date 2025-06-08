@@ -38,7 +38,10 @@ jobs:
             -v ${{ github.workspace }}:/app \
             ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
             sh -c "cd /app && \
-              # Download PKCS#11 headers
+              export SOFTHSM2_CONF=$(mktemp) && \
+              export MAKE_TOKEN_DIR=yes && \
+              sh test/softhsm-reset.sh && \
+              # Download PKCS#11 headers && \
               cd c_src && \
               curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h && \
               curl -z pkcs11t.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h && \
