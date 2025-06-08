@@ -518,6 +518,14 @@ static const mechanism_map_t mechanism_map[] = {
 
     /* Elliptic Curve algorithms */
     {"ckm_ec_key_pair_gen", CKM_EC_KEY_PAIR_GEN},
+    {"ckm_ecdsa", CKM_ECDSA},
+    {"ckm_ecdsa_sha1", CKM_ECDSA_SHA1},
+    {"ckm_ecdsa_sha224", CKM_ECDSA_SHA224},
+    {"ckm_ecdsa_sha256", CKM_ECDSA_SHA256},
+    {"ckm_ecdsa_sha384", CKM_ECDSA_SHA384},
+    {"ckm_ecdsa_sha512", CKM_ECDSA_SHA512},
+    {"ckm_ecdsa_sha3_224", CKM_ECDSA_SHA3_224},
+    {"ckm_ecdsa_sha3_256", CKM_ECDSA_SHA3_256},
 
     {NULL, 0}
 };

@@ -13,14 +13,12 @@ defmodule P11exTest.ECGenKey do
     P11ex.TestHelper.setup_session()
   end
 
-  @tag :ec_genkey
-  test "generate_key_pair", context do
+  test "generate EC key pair (secp256r1, secp384r1, secp521r1)", context do
 
     [:secp256r1, :secp384r1, :secp521r1]
       |> Enum.each(fn curve ->
 
       key_id = :crypto.strong_rand_bytes(16)
-
       mechanism = {:ckm_ec_key_pair_gen}
 
       {:ok, params} = ECParam.ec_params_from_named_curve(curve)

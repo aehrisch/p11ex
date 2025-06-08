@@ -93,6 +93,39 @@ defmodule P11exRSATestHelper do
       pubk_template, prvk_template)
     {pubk, prvk}
   end
+end
+
+defmodule ECSignTestHelper do
+
+  def gen_keypair(session_pid, curve) do
+
+    key_id = :crypto.strong_rand_bytes(16)
+    mechanism = {:ckm_ec_key_pair_gen}
+
+    {:ok, params} = P11ex.ECParam.ec_params_from_named_curve(curve)
+
+    pubk_template = [
+      {:cka_token, false},
+      {:cka_key_type, :ckk_ec},
+      {:cka_verify, true},
+      {:cka_label, "pubk-#{curve}"},
+      {:cka_ec_params, params},
+      {:cka_id, key_id}
+    ]
+
+    prvk_template = [
+      {:cka_token, false},
+      {:cka_key_type, :ckk_ec},
+      {:cka_sign, true},
+      {:cka_label, "prvk-#{curve}"},
+      {:cka_id, key_id}
+    ]
+
+    {:ok, {pubk, prvk}} =
+      P11ex.Session.generate_key_pair(session_pid,
+        mechanism, pubk_template, prvk_template)
+    {pubk, prvk}
+  end
 
 end
 

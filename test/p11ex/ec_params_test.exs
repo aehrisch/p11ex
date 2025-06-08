@@ -32,6 +32,9 @@ defmodule P11ex.ECParamsTest do
           assert {:ok, params} = P11ex.ECParam.ec_params_from_named_curve(name)
           assert params == der
       end)
+
+    assert {:error, str} = P11ex.ECParam.ec_params_from_named_curve(:secp42r1)
+    assert String.contains?(str, "secp42r1")
   end
 
 end
