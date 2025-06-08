@@ -87,7 +87,18 @@ jobs:
       packages: read
     
     steps:
+      - name: Cleanup root-owned files
+        if: always()
+        run: |
+          sudo find ${{ github.workspace }} -user root -exec chown -h ubuntu:ubuntu {} \;
+          sudo rm -rf ${{ github.workspace }}/*
+
       - uses: actions/checkout@v4
+
+      - name: Ensure proper permissions
+        run: |
+          sudo chown -R ubuntu:ubuntu ${{ github.workspace }}
+          sudo chmod -R u+w ${{ github.workspace }}
 
       - name: Set up Erlang
         uses: erlef/setup-beam@v1
@@ -114,9 +125,12 @@ jobs:
           cd ${{ github.workspace }}
 
       - name: Setup SoftHSM2
+        env:
+          PKCS11_MODULE: /usr/local/lib/softhsm/libsofthsm2.so
         run: |
           export SOFTHSM2_CONF=$(mktemp)
           export MAKE_TOKEN_DIR=yes
+          
           sh test/softhsm-reset.sh
 
       - name: Download PKCS#11 headers
@@ -128,6 +142,8 @@ jobs:
           cd ..
 
       - name: Install dependencies and run tests
+        env:
+          PKCS11_MODULE: /usr/local/lib/softhsm/libsofthsm2.so
         run: |
           mix local.hex --force
           mix deps.get
