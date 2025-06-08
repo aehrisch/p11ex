@@ -1,5 +1,5 @@
 defmodule P11ex.YubikeyRSASignTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   alias P11ex.Session, as: Session
 
