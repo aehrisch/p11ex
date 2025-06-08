@@ -15,45 +15,52 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Elixir
-        uses: erlef/setup-beam@v1
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
         with:
-          elixir-version: '1.14.0'
-          otp-version: '25.0'
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Restore dependencies cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            deps
-            _build
-          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-          restore-keys: ${{ runner.os }}-mix-
-
-      - name: Install dependencies
-        run: mix deps.get
-
-      - name: Run tests
-        run: mix test
-
-      - name: Run credo
-        run: mix credo
-
-      - name: Setup git_ops and generate changelog
+      - name: Pull latest test image
         run: |
-          mix deps.get
-          mix git_ops.release
-          mix git_ops.changelog
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64
 
-      - name: Create Release Pull Request or Publish to Hex
+      - name: Run release process in Docker
         env:
           HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mix git_ops.release --dry-run
-          if [ $? -eq 0 ]; then
-            mix hex.publish
-          fi
+          docker run --rm \
+            -e HEX_API_KEY \
+            -e GITHUB_TOKEN \
+            -e MIX_ENV=prod \
+            -v ${{ github.workspace }}:/app \
+            ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
+            sh -c "cd /app && \
+              # Download PKCS#11 headers
+              cd c_src && \
+              curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h && \
+              curl -z pkcs11t.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h && \
+              curl -z pkcs11f.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h && \
+              cd .. && \
+              # Install hex and get dependencies
+              mix local.hex --force && \
+              mix deps.get && \
+              mix deps.compile && \
+              # Build NIF
+              make clean && \
+              make && \
+              # Run tests
+              mix test && \
+              # Run credo
+              mix credo && \
+              # Setup git_ops and generate changelog
+              mix git_ops.release && \
+              mix git_ops.changelog && \
+              # Build and publish
+              mix hex.build && \
+              mix hex.publish"
 
       - name: Create GitHub Release
         if: success()
