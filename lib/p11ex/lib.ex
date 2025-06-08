@@ -1025,30 +1025,63 @@ defmodule P11ex.Lib do
   ## Example: Generate a RSA key pair
 
   ```elixir
-    mechanism = {:ckm_rsa_pkcs_key_pair_gen}
+  mechanism = {:ckm_rsa_pkcs_key_pair_gen}
 
-    pubk_template = [
-      {:cka_token, false},
-      {:cka_encrypt, true},
-      {:cka_verify, true},
-      {:cka_modulus_bits, 2048},
-      {:cka_public_exponent, 65537},
-      {:cka_label, "rsa_test_key"}
-    ]
+  pubk_template = [
+    {:cka_token, false},
+    {:cka_encrypt, true},
+    {:cka_verify, true},
+    {:cka_modulus_bits, 2048},
+    {:cka_public_exponent, 65537},
+    {:cka_label, "rsa_test_key"}
+  ]
 
-    prvk_template = [
-      {:cka_token, false},
-      {:cka_private, true},
-      {:cka_sensitive, true},
-      {:cka_decrypt, true},
-      {:cka_sign, true},
-      {:cka_label, "rsa_test_key"}
-    ]
+  prvk_template = [
+    {:cka_token, false},
+    {:cka_private, true},
+    {:cka_sensitive, true},
+    {:cka_decrypt, true},
+    {:cka_sign, true},
+    {:cka_label, "rsa_test_key"}
+  ]
 
-    {pubk, prvk} =
-      P11ex.Session.generate_key_pair(session_pid,
-      {:ckm_rsa_pkcs_key_pair_gen},
-      pubk_template, prvk_template)
+  {pubk, prvk} =
+    P11ex.Session.generate_key_pair(session_pid,
+    {:ckm_rsa_pkcs_key_pair_gen},
+    pubk_template, prvk_template)
+  ```
+
+  ## Example: Generate an EC key pair (secp256r1)
+
+  See `P11ex.ECParam.ec_params_from_named_curve/1` for more functions that
+  help to create the value of the `:cka_ec_params` attribute.
+
+  ```elixir
+  key_id = :crypto.strong_rand_bytes(16)
+
+  mechanism = {:ckm_ec_key_pair_gen}
+  {:ok, params} = ECParam.ec_params_from_named_curve(:secp256r1)
+
+  pubk_template = [
+    {:cka_token, false},
+    {:cka_key_type, :ckk_ec},
+    {:cka_verify, true},
+    {:cka_label, "pubk-secp256r1"},
+    {:cka_ec_params, params},
+    {:cka_id, key_id}
+  ]
+
+  prvk_template = [
+    {:cka_token, false},
+    {:cka_key_type, :ckk_ec},
+    {:cka_sign, true},
+    {:cka_label, "prvk-secp256r1"},
+    {:cka_id, key_id}
+  ]
+
+  {:ok, {pubk, prvk}} =
+      Session.generate_key_pair(context.session_pid,
+          mechanism, pubk_template, prvk_template)
   ```
   """
   @spec generate_key_pair(SessionHandle.t(), mechanism_instance(), attributes(), attributes())
