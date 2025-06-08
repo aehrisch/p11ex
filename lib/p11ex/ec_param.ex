@@ -1,5 +1,9 @@
 defmodule P11ex.ECParam do
 
+  @moduledoc """
+  This module provides functions to encode and decode elliptic curve parameters.
+  """
+
   @named_curves [
     {:secp192r1, {1,2,840,10045,3,1,1}},
     {:secp224r1, {1,3,132,0,33}},

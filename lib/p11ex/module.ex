@@ -27,6 +27,7 @@ defmodule P11ex.Module do
       Supervisor.init(children, strategy: :one_for_one)
     end
   end
+  ```
   """
 
   use GenServer

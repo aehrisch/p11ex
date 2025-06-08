@@ -803,6 +803,20 @@ defmodule P11ex.Lib do
   {:ok, signature} = Session.sign(session, data)
   ```
 
+  ### ECDSA Signature Mechanism (`:ckm_ecdsa`)
+
+  This algorithm requires a pre-computed digest of the data to sign. That is,
+  it does not compute the digest itself.
+
+  Example:
+
+  ```elixir
+  data = :crypto.strong_rand_bytes(1024)
+  digest = :crypto.hash(:sha256, data)
+
+  :ok = Session.sign_init(session, {:ckm_ecdsa}, priv_key)
+  {:ok, signature} = Session.sign(session, digest)
+  ```
   """
   @spec sign_init(SessionHandle.t(), mechanism_instance(), ObjectHandle.t())
     :: :ok | {:error, atom()} | {:error, atom(), any()}
