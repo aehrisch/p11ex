@@ -1719,6 +1719,7 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
     case CKM_AES_KEY_WRAP:
     case CKM_AES_KEY_WRAP_PAD:
     case CKM_AES_MAC:
+    case CKM_RSA_PKCS:
     case CKM_RSA_PKCS_KEY_PAIR_GEN:
       /* This mechanism has no parameters */
       return enif_make_atom(env, "ok");
