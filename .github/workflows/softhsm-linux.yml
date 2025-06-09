@@ -64,6 +64,11 @@ jobs:
               SOFTHSM_PREFIX=/usr/local \
             sh test/softhsm-reset.sh
 
+      - name: Fix workspace permissions after SoftHSM setup
+        run: |
+          sudo chown -R ubuntu:ubuntu ${{ github.workspace }}
+          sudo chmod -R u+w ${{ github.workspace }}
+
       - name: Download PKCS#11 headers
         run: |
           cd c_src
@@ -162,6 +167,11 @@ jobs:
               SOFTHSM_PREFIX=/usr/local \
             sh test/softhsm-reset.sh
 
+      - name: Fix workspace permissions after SoftHSM setup
+        run: |
+          sudo chown -R ubuntu:ubuntu ${{ github.workspace }}
+          sudo chmod -R u+w ${{ github.workspace }}
+
       - name: Download PKCS#11 headers
         run: |
           cd c_src
@@ -198,3 +208,5 @@ jobs:
           sudo rm -rvf ${{ github.workspace }}/_build
           sudo rm -rvf ${{ github.workspace }}/deps
           sudo rm -rvf ${{ github.workspace }}/priv
+          sudo rm -rvf ${{ github.workspace }}/src/*.asn1db
+          sudo rm -rvf ${{ github.workspace }}/sofhsm-conf.path
