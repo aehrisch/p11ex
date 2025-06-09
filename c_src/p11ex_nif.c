@@ -2056,18 +2056,28 @@ static ERL_NIF_TERM set_mechanism_parameters_from_term(ErlNifEnv* env,
       CK_BYTE_PTR data_ptr = NULL;
       size_t param_size = 0, source_data_size = 0;
 
-      if (!enif_get_map_value(env, map, enif_make_atom(env, "hash_alg"), &hash_alg_term)
-          || !enif_is_atom(env, hash_alg_term)) {
+      if (!enif_get_map_value(env, map, enif_make_atom(env, "hash_alg"), &hash_alg_term)) {
         return enif_make_tuple3(env, 
           enif_make_atom(env, "error"), 
-          enif_make_atom(env, "invalid_hash_alg_parameter"), hash_alg_term);
+          enif_make_atom(env, "invalid_hash_alg_parameter"), enif_make_atom(env, "nil"));
+      } else {
+        if (!enif_is_atom(env, hash_alg_term)) {
+          return enif_make_tuple3(env, 
+            enif_make_atom(env, "error"), 
+            enif_make_atom(env, "invalid_hash_alg_parameter"), hash_alg_term);
+        }
       }
 
-      if (!enif_get_map_value(env, map, enif_make_atom(env, "mgf_hash_alg"), &mgf_hash_alg_term)
-          || !enif_is_atom(env, mgf_hash_alg_term)) {
+      if (!enif_get_map_value(env, map, enif_make_atom(env, "mgf_hash_alg"), &mgf_hash_alg_term)) {
         return enif_make_tuple3(env, 
           enif_make_atom(env, "error"), 
-          enif_make_atom(env, "invalid_mgf_hash_alg_parameter"), mgf_hash_alg_term);
+          enif_make_atom(env, "invalid_mgf_hash_alg_parameter"), enif_make_atom(env, "nil"));
+      } else {
+        if (!enif_is_atom(env, mgf_hash_alg_term)) {
+          return enif_make_tuple3(env, 
+            enif_make_atom(env, "error"), 
+            enif_make_atom(env, "invalid_mgf_hash_alg_parameter"), mgf_hash_alg_term);
+        }
       }
 
       if (enif_get_map_value(env, map, enif_make_atom(env, "source_data"), &source_data_term)) {
