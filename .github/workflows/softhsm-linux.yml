@@ -42,11 +42,25 @@ jobs:
           sudo ldconfig
           cd ${{ github.workspace }}
 
+      - name: Build and install pkcs11-tools
+        run: |
+          cd /tmp
+          git clone https://github.com/Mastercard/pkcs11-tools.git
+          cd pkcs11-tools
+          git checkout v2.6.0
+          autoreconf -i
+          ./configure --prefix=/usr/local
+          make
+          sudo make install
+          sudo ldconfig
+          cd ${{ github.workspace }}
+
       - name: Setup SoftHSM2
         run: |
           env SOFTHSM2_CONF=$(mktemp) \
               MAKE_TOKEN_DIR=yes \
               PKCS11_MODULE=/usr/local/lib/softhsm/libsofthsm2.so \
+              P11TOOL_PREFIX=/usr/local \
               SOFTHSM_PREFIX=/usr/local \
             sh test/softhsm-reset.sh
 
@@ -126,11 +140,25 @@ jobs:
           sudo ldconfig
           cd ${{ github.workspace }}
 
+      - name: Build and install pkcs11-tools
+        run: |
+          cd /tmp
+          git clone https://github.com/Mastercard/pkcs11-tools.git
+          cd pkcs11-tools
+          git checkout v2.6.0
+          autoreconf -i
+          ./configure --prefix=/usr/local
+          make
+          sudo make install
+          sudo ldconfig
+          cd ${{ github.workspace }}
+
       - name: Setup SoftHSM2
         run: |
           env SOFTHSM2_CONF=$(mktemp) \
               MAKE_TOKEN_DIR=yes \
               PKCS11_MODULE=/usr/local/lib/softhsm/libsofthsm2.so \
+              P11TOOL_PREFIX=/usr/local \
               SOFTHSM_PREFIX=/usr/local \
             sh test/softhsm-reset.sh
 
