@@ -106,6 +106,8 @@ jobs:
       pull-requests: write
       contents: read
       packages: read
+    env:
+      ImageOS: ubuntu24
     
     steps:
       - name: Cleanup root-owned files
