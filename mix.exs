@@ -106,7 +106,7 @@ defmodule P11ex.MixProject do
       {:excoveralls, "~> 0.18", only: :test},
       {:ex_doc, "~> 0.34", only: [:dev, :test]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:git_ops, "~> 2.6", only: [:dev], runtime: false}
+      {:git_ops, "~> 2.6", runtime: false}
     ]
   end
 

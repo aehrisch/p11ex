@@ -1,0 +1,328 @@
+name: Release to Hex.pm
+
+on:
+  push:
+    branches: [ main ]
+    tags: []
+
+jobs:
+  calculate-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull linux-amd64 image
+        run: |
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64
+
+      - name: Calculate version
+        id: version
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/app \
+            ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
+            sh -c "cd /app && \
+              mix local.hex --force && \
+              mix deps.get && \
+              mix git_ops.version && \
+              VERSION=\$(mix git_ops.version --dry-run) && \
+              echo \"version=\$VERSION\" > /tmp/version.txt"
+          
+          VERSION=$(cat /tmp/version.txt | grep version= | cut -d= -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Calculated version: $VERSION"
+
+  build-linux-amd64:
+    runs-on: ubuntu-latest
+    needs: calculate-version
+    steps:
+      - name: Cleanup workspace
+        run: |
+          sudo rm -rf ${{ github.workspace }}/*
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull linux-amd64 image
+        run: |
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64
+
+      - name: Build and test linux-amd64
+        run: |
+          docker run --rm \
+            -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+            -e MIX_ENV=test \
+            -v ${{ github.workspace }}:/app \
+            ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
+            sh -c "cd /app && \
+              export SOFTHSM2_CONF=\$(mktemp) && \
+              export MAKE_TOKEN_DIR=yes && \
+              sh test/softhsm-reset.sh && \
+              cd c_src && \
+              curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h && \
+              curl -z pkcs11t.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h && \
+              curl -z pkcs11f.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h && \
+              cd .. && \
+              mix local.hex --force && \
+              mix deps.get && \
+              mix compile && \
+              mix test --exclude yubikey"
+
+      - name: Upload linux-amd64 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-amd64-artifacts
+          path: |
+            _build/
+            priv/
+
+  build-linux-arm64:
+    runs-on: [self-hosted, Linux, ARM64]
+    needs: calculate-version
+    steps:
+      - name: Cleanup workspace
+        run: |
+          sudo rm -rf ${{ github.workspace }}/*
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull linux-arm64 image
+        run: |
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-arm64
+
+      - name: Build and test linux-arm64
+        run: |
+          docker run --rm \
+            -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+            -e MIX_ENV=test \
+            -v ${{ github.workspace }}:/app \
+            ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-arm64 \
+            sh -c "cd /app && \
+              export SOFTHSM2_CONF=\$(mktemp) && \
+              export MAKE_TOKEN_DIR=yes && \
+              sh test/softhsm-reset.sh && \
+              cd c_src && \
+              curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h && \
+              curl -z pkcs11t.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h && \
+              curl -z pkcs11f.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h && \
+              cd .. && \
+              mix local.hex --force && \
+              mix deps.get && \
+              mix compile && \
+              mix test --exclude yubikey"
+
+      - name: Upload linux-arm64 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64-artifacts
+          path: |
+            _build/
+            priv/
+
+  build-macos-arm64:
+    runs-on: macos-latest
+    needs: calculate-version
+    steps:
+      - name: Cleanup workspace
+        run: |
+          sudo rm -rf ${{ github.workspace }}/*
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Erlang and Elixir
+        run: |
+          brew install erlang elixir
+
+      - name: Install build tools
+        run: |
+          brew install autoconf automake
+
+      - name: Install PKCS11 tools
+        run: |
+          brew install pkcs11-tools opensc
+
+      - name: Checkout SoftHSMv2 at tag 2.6.1 (shallow clone)
+        run: |
+          git clone --branch 2.6.1 --depth 1 https://github.com/softhsm/SoftHSMv2.git
+
+      - name: Configure SoftHSM Build
+        run: |
+          mkdir ${{ github.workspace }}/softhsm
+          cd SoftHSMv2
+          ./autogen.sh
+          ./configure --prefix=${{ github.workspace }}/softhsm --enable-ecc --enable-eddsa --with-openssl=/opt/homebrew/opt/openssl@3 --disable-gost
+
+      - name: Build and install SoftHSM
+        run: |
+          cd ${{ github.workspace }}/SoftHSMv2
+          make
+          make install
+
+      - name: Download pkcs11 headers
+        run: |
+          cd c_src
+          curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h 
+          curl -z pkcs11t.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h
+          curl -z pkcs11f.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h 
+
+      - name: Install hex and get dependencies
+        run: |
+          mix local.hex --force && mix deps.get
+
+      - name: Mix compile
+        run: |
+          mix compile
+          
+      - name: Initialize SoftHSM token
+        run: |
+          mkdir -p ${{ github.workspace }}/token
+          env SOFTHSM_PREFIX=${{ github.workspace }}/softhsm \
+              PKCS11_MODULE=${{ github.workspace }}/softhsm/lib/softhsm/libsofthsm2.so \
+              P11TOOL_PREFIX=/opt/homebrew \
+              MAKE_TOKEN_DIR=yes \
+            bash -x test/softhsm-reset.sh
+
+      - name: Mix test
+        run: |
+          env MIX_ENV=test \
+              PKCS11_MODULE=${{ github.workspace }}/softhsm/lib/softhsm/libsofthsm2.so \
+              SOFTHSM2_CONF=`cat ${{ github.workspace }}/sofhsm-conf.path` \
+            mix test --cover --trace --exclude yubikey
+
+      - name: Upload macos-arm64 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64-artifacts
+          path: |
+            _build/
+            priv/
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [calculate-version, build-linux-amd64, build-linux-arm64, build-macos-arm64]
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull linux-amd64 image
+        run: |
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64
+
+      - name: Create git tag
+        id: tag
+        run: |
+          VERSION="${{ needs.calculate-version.outputs.version }}"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update version in mix.exs
+        run: |
+          VERSION="${{ needs.calculate-version.outputs.version }}"
+          # Update the version in mix.exs
+          sed -i "s/version: \".*\"/version: \"$VERSION\"/" mix.exs
+
+      - name: Download all architecture artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Combine multi-architecture binaries
+        run: |
+          # Create the priv directory structure
+          mkdir -p priv
+          
+          # Copy binaries from all architectures
+          if [ -d "artifacts/linux-amd64-artifacts/priv" ]; then
+            cp -r artifacts/linux-amd64-artifacts/priv/* priv/
+          fi
+          
+          if [ -d "artifacts/linux-arm64-artifacts/priv" ]; then
+            cp -r artifacts/linux-arm64-artifacts/priv/* priv/
+          fi
+          
+          if [ -d "artifacts/macos-arm64-artifacts/priv" ]; then
+            cp -r artifacts/macos-arm64-artifacts/priv/* priv/
+          fi
+          
+          # List what we have
+          echo "Combined binaries:"
+          find priv -type f
+
+      - name: Generate changelog and prepare release
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/app \
+            ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
+            sh -c "cd /app && \
+              mix local.hex --force && \
+              mix deps.get && \
+              mix git_ops.changelog && \
+              mix docs && \
+              mix hex.build"
+
+      - name: Publish to Hex.pm
+        env:
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+        run: |
+          docker run --rm \
+            -e HEX_API_KEY=${{ secrets.HEX_API_KEY }} \
+            -v ${{ github.workspace }}:/app \
+            ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
+            sh -c "cd /app && \
+              mix local.hex --force && \
+              mix deps.get && \
+              mix compile && \
+              mix hex.publish --yes"
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          release_name: Release ${{ steps.tag.outputs.tag }}
+          body: |
+            ## Changes in this release
+            
+            See [CHANGELOG.md](CHANGELOG.md) for detailed information about this release.
+            
+            ## Installation
+            
+            ```elixir
+            def deps do
+              [
+                {:p11ex, "~> ${{ needs.calculate-version.outputs.version }}"}
+              ]
+            end
+            ```
+            
+            ## Supported Architectures
+            
+            This release includes pre-compiled NIF binaries for:
+            - Linux AMD64
+            - Linux ARM64  
+            - macOS ARM64
+          draft: false
+          prerelease: false 
