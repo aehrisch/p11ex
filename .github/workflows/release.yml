@@ -23,25 +23,42 @@ jobs:
       - name: Calculate version
         id: version
         run: |
-          # Use git_ops to calculate the next version based on commit messages
-          # Run in Docker to avoid compilation issues on the host
+          # Use semantic-release to calculate the next version based on conventional commits
+          # This is more reliable than git_ops
           docker run --rm \
             -v ${{ github.workspace }}:/app \
             ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
             sh -c "cd /app && \
-              cd c_src && \
-              curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h && \
-              curl -z pkcs11t.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h && \
-              curl -z pkcs11f.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h && \
-              cd .. && \
-              export MIX_ENV=dev && \
-              mix local.hex --force && \
-              mix deps.get && \
-              mix compile && \
-              VERSION=\$(mix run -e \"IO.puts(GitOps.version())\") && \
+              # Install Node.js and npm
+              curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+              apt-get install -y nodejs && \
+              # Install semantic-release
+              npm install -g semantic-release @semantic-release/changelog @semantic-release/git && \
+              # Create semantic-release config
+              cat > .releaserc.json << 'EOF'
+              {
+                \"branches\": [\"main\"],
+                \"plugins\": [
+                  \"@semantic-release/commit-analyzer\",
+                  \"@semantic-release/release-notes-generator\",
+                  \"@semantic-release/changelog\",
+                  \"@semantic-release/npm\",
+                  \"@semantic-release/git\"
+                ]
+              }
+              EOF
+              # Run semantic-release in dry-run mode to get next version
+              npx semantic-release --dry-run --no-ci > /tmp/semantic-output.txt 2>&1 || true && \
+              # Extract version from output
+              if grep -q 'The next release version is' /tmp/semantic-output.txt; then
+                VERSION=\$(grep 'The next release version is' /tmp/semantic-output.txt | sed 's/.*The next release version is \\(.*\\)/\\1/')
+              else
+                # If no conventional commits, use current version from mix.exs
+                VERSION=\$(grep 'version:' mix.exs | sed 's/.*version: \"\\(.*\\)\".*/\\1/')
+              fi && \
               echo \"version=\$VERSION\" > /tmp/version.txt"
           
-          VERSION=$(cat /tmp/version.txt)
+          VERSION=$(cat /tmp/version.txt | grep version= | cut -d= -f2)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Calculated version: $VERSION"
 
