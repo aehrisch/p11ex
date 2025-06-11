@@ -34,8 +34,10 @@ jobs:
               curl -z pkcs11t.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h && \
               curl -z pkcs11f.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h && \
               cd .. && \
+              export MIX_ENV=dev && \
               mix local.hex --force && \
               mix deps.get && \
+              mix compile && \
               VERSION=\$(mix git_ops.version --dry-run) && \
               echo \"version=\$VERSION\" > /tmp/version.txt"
           
