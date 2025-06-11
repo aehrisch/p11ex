@@ -38,10 +38,10 @@ jobs:
               mix local.hex --force && \
               mix deps.get && \
               mix compile && \
-              VERSION=\$(mix git_ops.version --dry-run) && \
+              VERSION=\$(mix run -e \"IO.puts(GitOps.version())\") && \
               echo \"version=\$VERSION\" > /tmp/version.txt"
           
-          VERSION=$(cat /tmp/version.txt | grep version= | cut -d= -f2)
+          VERSION=$(cat /tmp/version.txt)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Calculated version: $VERSION"
 
