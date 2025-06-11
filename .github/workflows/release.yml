@@ -16,29 +16,25 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Elixir
-        uses: erlef/setup-beam@v1
-        with:
-          elixir-version: '1.17.0'
-          otp-version: '27.3'
-
-      - name: Install hex and rebar
+      - name: Pull linux-amd64 image
         run: |
-          mix local.hex --force
-          mix local.rebar --force
-
-      - name: Get dependencies (without compilation)
-        run: |
-          # Only get the git_ops dependency, skip compilation
-          mix deps.get --only dev
-          # Don't compile, just get the deps
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64
 
       - name: Calculate version
         id: version
         run: |
           # Use git_ops to calculate the next version based on commit messages
-          # This doesn't need the full build environment
-          VERSION=$(mix git_ops.version --dry-run)
+          # Run in Docker to avoid compilation issues on the host
+          docker run --rm \
+            -v ${{ github.workspace }}:/app \
+            ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
+            sh -c "cd /app && \
+              mix local.hex --force && \
+              mix deps.get && \
+              VERSION=\$(mix git_ops.version --dry-run) && \
+              echo \"version=\$VERSION\" > /tmp/version.txt"
+          
+          VERSION=$(cat /tmp/version.txt | grep version= | cut -d= -f2)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Calculated version: $VERSION"
 
