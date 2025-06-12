@@ -62,7 +62,7 @@ jobs:
                 exit 1
               fi
 
-              echo "$VERSION" > /app/version.txt"
+              echo "$VERSION" > /app/version.txt
           
           VERSION=$(cat version.txt)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
