@@ -62,6 +62,9 @@ jobs:
             -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
             -e MIX_ENV=test \
             -v ${{ github.workspace }}:/app \
+            -v ${{ github.workspace }}/c_src/pkcs11.h:/app/c_src/pkcs11.h \
+            -v ${{ github.workspace }}/c_src/pkcs11t.h:/app/c_src/pkcs11t.h \
+            -v ${{ github.workspace }}/c_src/pkcs11f.h:/app/c_src/pkcs11f.h \
             ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
             sh -c "cd /app && \
               export SOFTHSM2_CONF=\$(mktemp) && \
@@ -103,6 +106,9 @@ jobs:
             -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
             -e MIX_ENV=test \
             -v ${{ github.workspace }}:/app \
+            -v ${{ github.workspace }}/c_src/pkcs11.h:/app/c_src/pkcs11.h \
+            -v ${{ github.workspace }}/c_src/pkcs11t.h:/app/c_src/pkcs11t.h \
+            -v ${{ github.workspace }}/c_src/pkcs11f.h:/app/c_src/pkcs11f.h \
             ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-arm64 \
             sh -c "cd /app && \
               export SOFTHSM2_CONF=\$(mktemp) && \
@@ -273,7 +279,9 @@ jobs:
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/app \
-            -v ${{ github.workspace }}/scripts:/scripts \
+            -v ${{ github.workspace }}/c_src/pkcs11.h:/app/c_src/pkcs11.h \
+            -v ${{ github.workspace }}/c_src/pkcs11t.h:/app/c_src/pkcs11t.h \
+            -v ${{ github.workspace }}/c_src/pkcs11f.h:/app/c_src/pkcs11f.h \
             ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
             sh -c "cd /app && \
               mix local.hex --force && \
@@ -289,7 +297,9 @@ jobs:
           docker run --rm \
             -e HEX_API_KEY=${{ secrets.HEX_API_KEY }} \
             -v ${{ github.workspace }}:/app \
-            -v ${{ github.workspace }}/scripts:/scripts \
+            -v ${{ github.workspace }}/c_src/pkcs11.h:/app/c_src/pkcs11.h \
+            -v ${{ github.workspace }}/c_src/pkcs11t.h:/app/c_src/pkcs11t.h \
+            -v ${{ github.workspace }}/c_src/pkcs11f.h:/app/c_src/pkcs11f.h \
             ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
             sh -c "cd /app && \
               mix local.hex --force && \
