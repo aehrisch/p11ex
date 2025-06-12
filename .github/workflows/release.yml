@@ -51,18 +51,18 @@ jobs:
               npx semantic-release --dry-run --no-ci > /tmp/semantic-output.txt 2>&1 || true && \
               # Extract version from output
               if grep -q 'The next release version is' /tmp/semantic-output.txt; then
-                VERSION=$(grep 'The next release version is' /tmp/semantic-output.txt | sed 's/.*The next release version is \(.*\)/\1/')
+                VERSION=\$(grep 'The next release version is' /tmp/semantic-output.txt | sed 's/.*The next release version is \\(.*\\)/\\1/')
               else
                 # If no conventional commits, use current version from mix.exs
-                VERSION=$(grep 'version:' mix.exs | sed 's/.*version: \"\(.*\)\".*/\1/')
+                VERSION=\$(grep 'version:' mix.exs | sed 's/.*version: \"\\(.*\\)\".*/\\1/')
               fi
 
-              if [ -z "$VERSION" ]; then
-                echo "ERROR: Could not determine version."
+              if [ -z \"\$VERSION\" ]; then
+                echo \"ERROR: Could not determine version.\"
                 exit 1
               fi
 
-              echo "$VERSION" > /app/version.txt
+              echo \"\$VERSION\" > /app/version.txt
           
           VERSION=$(cat version.txt)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
