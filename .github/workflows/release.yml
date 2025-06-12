@@ -69,6 +69,7 @@ jobs:
             sh -c "cd /app && \
               export SOFTHSM2_CONF=\$(mktemp) && \
               export MAKE_TOKEN_DIR=yes && \
+              find . && \
               sh test/softhsm-reset.sh && \
               mix local.hex --force && \
               mix deps.get && \
@@ -113,6 +114,7 @@ jobs:
             sh -c "cd /app && \
               export SOFTHSM2_CONF=\$(mktemp) && \
               export MAKE_TOKEN_DIR=yes && \
+              find . && \
               sh test/softhsm-reset.sh && \
               mix local.hex --force && \
               mix deps.get && \
