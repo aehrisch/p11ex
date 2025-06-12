@@ -37,7 +37,10 @@ jobs:
 
       - name: Download PKCS11 headers
         run: |
+          cd ${{ github.workspace }}/c_src
           bash scripts/download-pkcs11-headers.sh
+          ls -al .
+          cd ${{ github.workspace }}
 
   build-linux-amd64:
     runs-on: ubuntu-latest
