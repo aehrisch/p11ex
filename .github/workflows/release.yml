@@ -62,9 +62,9 @@ jobs:
                 exit 1
               fi
 
-              echo "version=$VERSION" > /tmp/version.txt"
+              echo "$VERSION" > /app/version.txt"
           
-          VERSION=$(cat /tmp/version.txt | grep version= | cut -d= -f2)
+          VERSION=$(cat version.txt)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Calculated version: $VERSION"
 
@@ -258,10 +258,19 @@ jobs:
         run: |
           docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64
 
+      - name: Debug version output
+        run: |
+          echo "Version from calculate-version job: '${{ needs.calculate-version.outputs.version }}'"
+          echo "Version length: ${#{{ needs.calculate-version.outputs.version }}}"
+
       - name: Create git tag
         id: tag
         run: |
           VERSION="${{ needs.calculate-version.outputs.version }}"
+          if [ -z "$VERSION" ]; then
+            echo "ERROR: Version is empty, cannot create git tag"
+            exit 1
+          fi
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git tag -a "v$VERSION" -m "Release v$VERSION"
