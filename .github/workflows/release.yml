@@ -70,6 +70,10 @@ jobs:
               export SOFTHSM2_CONF=\$(mktemp) && \
               export MAKE_TOKEN_DIR=yes && \
               find . && \
+              ls -la c_src && \
+              cat c_src/pkcs11.h && \
+              cat c_src/pkcs11t.h && \
+              cat c_src/pkcs11f.h && \
               sh test/softhsm-reset.sh && \
               mix local.hex --force && \
               mix deps.get && \
