@@ -227,8 +227,9 @@ jobs:
 
       - name: Debug version output
         run: |
-          echo "Version from calculate-version job: '${{ needs.calculate-version.outputs.version }}'"
-          echo "Version length: ${#{{ needs.calculate-version.outputs.version }}}"
+          VERSION="${{ needs.calculate-version.outputs.version }}"
+          echo "Version from calculate-version job: '$VERSION'"
+          echo "Version length: ${#VERSION}"
 
       - name: Create git tag
         id: tag
