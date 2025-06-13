@@ -5,5 +5,5 @@ url=https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01
 files=(pkcs11.h pkcs11t.h pkcs11f.h)
 
 for file in "${files[@]}"; do
-  curl -L -c --no-progress-meter -z -o $1/$file $url/$file
+  curl -L --no-progress-meter -o $1/$file $url/$file
 done
