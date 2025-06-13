@@ -23,11 +23,7 @@ defmodule P11ex.MixProject do
       make_targets: ["all"],
       # Hex.pm package configuration
       package: package(),
-      description: "PKCS#11 interface for Elixir",
-      links: %{
-        "GitHub" => "https://github.com/#{github_repo()}",
-        "Documentation" => "https://hexdocs.pm/p11ex"
-      }
+      description: "PKCS#11 interface for Elixir"
     ]
   end
 
@@ -40,9 +36,13 @@ defmodule P11ex.MixProject do
   defp package do
     [
       name: "p11ex",
-      files: ~w(lib src mix.exs README.md LICENSE CHANGELOG.md),
+      files: ~w(lib src mix.exs README.md LICENSE),
       maintainers: ["Eric"],
-      licenses: ["BSD-3-Clause"]
+      licenses: ["BSD-3-Clause"],
+      links: %{
+        "GitHub" => "https://github.com/#{github_repo()}",
+        "Documentation" => "https://hexdocs.pm/p11ex"
+      }
     ]
   end
 
