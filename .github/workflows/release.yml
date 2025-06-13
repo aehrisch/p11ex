@@ -35,10 +35,6 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Calculated version: $VERSION"
 
-      - name: Download PKCS11 headers
-        run: |
-          bash ${{ github.workspace }}/scripts/download-pkcs11-headers.sh ${{ github.workspace }}/c_src
-          ls -al ${{ github.workspace }}/c_src
 
   build-linux-amd64:
     runs-on: ubuntu-latest
@@ -53,6 +49,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Download PKCS11 headers
+        run: |
+          bash ${{ github.workspace }}/scripts/download-pkcs11-headers.sh ${{ github.workspace }}/c_src
+          ls -al ${{ github.workspace }}/c_src
+  
       - name: Pull linux-amd64 image
         run: |
           docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64
@@ -68,9 +69,6 @@ jobs:
               export SOFTHSM2_CONF=\$(mktemp) && \
               export MAKE_TOKEN_DIR=yes && \
               ls -la c_src && \
-              cat c_src/pkcs11.h && \
-              cat c_src/pkcs11t.h && \
-              cat c_src/pkcs11f.h && \
               sh test/softhsm-reset.sh && \
               mix local.hex --force && \
               mix deps.get && \
@@ -98,6 +96,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Download PKCS11 headers
+        run: |
+          bash ${{ github.workspace }}/scripts/download-pkcs11-headers.sh ${{ github.workspace }}/c_src
+          ls -al ${{ github.workspace }}/c_src
+  
       - name: Pull linux-arm64 image
         run: |
           docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-arm64
@@ -139,6 +142,11 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download PKCS11 headers
+        run: |
+          bash ${{ github.workspace }}/scripts/download-pkcs11-headers.sh ${{ github.workspace }}/c_src
+          ls -al ${{ github.workspace }}/c_src
 
       - name: Install Erlang and Elixir
         run: |
@@ -274,6 +282,11 @@ jobs:
           # List what we have
           echo "Combined binaries:"
           find priv -type f
+
+      - name: Download PKCS11 headers
+        run: |
+          bash ${{ github.workspace }}/scripts/download-pkcs11-headers.sh ${{ github.workspace }}/c_src
+          ls -al ${{ github.workspace }}/c_src
 
       - name: Generate changelog and prepare release
         run: |
