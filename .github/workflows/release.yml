@@ -173,10 +173,6 @@ jobs:
           make
           make install
 
-      - name: Download pkcs11 headers
-        run: |
-          bash scripts/download-pkcs11-headers.sh
-
       - name: Install hex and get dependencies
         run: |
           mix local.hex --force && mix deps.get
