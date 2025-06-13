@@ -24,7 +24,6 @@ defmodule P11ex.MixProject do
       # Hex.pm package configuration
       package: package(),
       description: "PKCS#11 interface for Elixir",
-      licenses: ["BSD-3-Clause"],
       links: %{
         "GitHub" => "https://github.com/#{github_repo()}",
         "Documentation" => "https://hexdocs.pm/p11ex"
