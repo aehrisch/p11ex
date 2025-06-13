@@ -296,7 +296,6 @@ jobs:
             sh -c "cd /app && \
               mix local.hex --force && \
               mix deps.get && \
-              mix git_ops.changelog && \
               mix docs && \
               mix hex.build"
 
