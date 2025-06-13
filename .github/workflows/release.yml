@@ -96,11 +96,6 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download PKCS11 headers
-        run: |
-          bash ${{ github.workspace }}/scripts/download-pkcs11-headers.sh ${{ github.workspace }}/c_src
-          ls -al ${{ github.workspace }}/c_src
-  
       - name: Pull linux-arm64 image
         run: |
           docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-arm64
@@ -113,6 +108,7 @@ jobs:
             -v ${{ github.workspace }}:/app \
             ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-arm64 \
             sh -c "cd /app && \
+              bash scripts/download-pkcs11-headers.sh c_src && \
               export SOFTHSM2_CONF=\$(mktemp) && \
               export MAKE_TOKEN_DIR=yes && \
               find . && \
