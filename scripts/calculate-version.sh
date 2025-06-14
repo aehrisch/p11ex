@@ -25,12 +25,15 @@ EOF
 # Run semantic-release in dry-run mode to get next version
 npx semantic-release --dry-run --no-ci > /tmp/semantic-output.txt 2>&1 || true
 
-# Extract version from output
+# Check if semantic-release would create a new release
 if grep -q 'The next release version is' /tmp/semantic-output.txt; then
   VERSION=$(grep 'The next release version is' /tmp/semantic-output.txt | sed 's/.*The next release version is \(.*\)/\1/')
+  echo "New version detected: $VERSION"
 else
-  # If no conventional commits, use current version from mix.exs
-  VERSION=$(grep 'version:' mix.exs | sed 's/.*version: "\(.*\)".*/\1/')
+  # No conventional commits found, no new release needed
+  echo "No conventional commits found. No new release needed."
+  echo "" > /app/version.txt
+  exit 0
 fi
 
 if [ -z "$VERSION" ]; then

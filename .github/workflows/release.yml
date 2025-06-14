@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      no_release: ${{ steps.version.outputs.no_release }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,9 +33,16 @@ jobs:
             bash /scripts/calculate-version.sh
           
           VERSION=$(cat version.txt)
+          
+          if [ -z "$VERSION" ]; then
+            echo "No new version needed. Stopping pipeline."
+            echo "no_release=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "no_release=false" >> $GITHUB_OUTPUT
           echo "Calculated version: $VERSION"
-
 
   build-linux-amd64:
     runs-on: ubuntu-latest
@@ -217,6 +225,13 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if release is needed
+        run: |
+          if [ "${{ needs.calculate-version.outputs.no_release }}" = "true" ]; then
+            echo "No new version needed. Skipping release."
+            exit 0
+          fi
 
       - name: Pull linux-amd64 image
         run: |
