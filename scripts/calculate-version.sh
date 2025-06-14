@@ -29,16 +29,9 @@ npx semantic-release --dry-run --no-ci > /tmp/semantic-output.txt 2>&1 || true
 if grep -q 'The next release version is' /tmp/semantic-output.txt; then
   VERSION=$(grep 'The next release version is' /tmp/semantic-output.txt | sed 's/.*The next release version is \(.*\)/\1/')
   echo "New version detected: $VERSION"
+  echo "$VERSION" > /app/version.txt
 else
   # No conventional commits found, no new release needed
   echo "No conventional commits found. No new release needed."
-  echo "" > /app/version.txt
-  exit 0
-fi
-
-if [ -z "$VERSION" ]; then
-  echo "ERROR: Could not determine version."
-  exit 1
-fi
-
-echo "$VERSION" > /app/version.txt 
+  echo "NO_RELEASE_NEEDED" > /app/version.txt
+fi 
