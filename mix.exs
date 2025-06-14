@@ -37,10 +37,10 @@ defmodule P11ex.MixProject do
     [
       name: "p11ex",
       files: ~w(lib src mix.exs README.md LICENSE),
-      maintainers: ["Eric"],
+      maintainers: ["aehrisch"],
       licenses: ["BSD-3-Clause"],
       links: %{
-        "GitHub" => "https://github.com/#{github_repo()}",
+        "GitHub" => "https://github.com/aehrisch/p11ex",
         "Documentation" => "https://hexdocs.pm/p11ex"
       }
     ]
