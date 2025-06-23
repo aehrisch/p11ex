@@ -29,10 +29,6 @@ defmodule P11ex.MixProject do
 
   defp asn1_options, do: [maps: true, der: true, jer: false, verbose: true]
 
-  defp github_repo do
-    "eric/p11ex"
-  end
-
   defp package do
     [
       name: "p11ex",
