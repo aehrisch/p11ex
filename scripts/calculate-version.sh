@@ -9,6 +9,13 @@ apt-get install -y nodejs
 npm install -g semantic-release @semantic-release/changelog @semantic-release/git
 
 # Create semantic-release config
+cd /app
+echo "Current directory: $(pwd)"
+echo "Git status:"
+git status --porcelain || echo "Git not available"
+echo "Git log --oneline -5:"
+git log --oneline -5 || echo "Git log failed"
+
 cat > .releaserc.json << 'EOF'
 {
   "branches": ["main"],

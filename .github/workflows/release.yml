@@ -30,6 +30,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/app \
             -v ${{ github.workspace }}/scripts:/scripts \
+            -v ${{ github.workspace }}/.git:/app/.git \
             ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
             bash /scripts/calculate-version.sh
           
