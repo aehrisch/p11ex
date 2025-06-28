@@ -6,7 +6,7 @@ curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt-get install -y nodejs
 
 # Install semantic-release
-npm install -g semantic-release @semantic-release/changelog @semantic-release/git
+npm install -g semantic-release @semantic-release/commit-analyzer
 
 # Create semantic-release config
 cd /app
@@ -24,11 +24,7 @@ cat > .releaserc.json << 'EOF'
 {
   "branches": ["main"],
   "plugins": [
-    "@semantic-release/commit-analyzer",
-    "@semantic-release/release-notes-generator",
-    "@semantic-release/changelog",
-    "@semantic-release/npm",
-    "@semantic-release/git"
+    "@semantic-release/commit-analyzer"
   ]
 }
 EOF
