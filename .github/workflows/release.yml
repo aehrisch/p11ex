@@ -1,13 +1,12 @@
 name: Release to Hex.pm
 
 on:
-  push:
-    branches: [ main ]
-    tags: []
+  workflow_dispatch:
 
 jobs:
   calculate-version:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
     outputs:
       version: ${{ steps.version.outputs.version }}
       no_release: ${{ steps.version.outputs.no_release }}
