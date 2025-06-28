@@ -23,11 +23,11 @@ cat > .releaserc.json << 'EOF'
 EOF
 
 # Run semantic-release in dry-run mode to get next version
-npx semantic-release --dry-run --no-ci > /tmp/semantic-output.txt 2>&1 || true
+npx semantic-release --dry-run --no-ci > /app/semantic-output.txt 2>&1 || true
 
 # Check if semantic-release would create a new release
-if grep -q 'The next release version is' /tmp/semantic-output.txt; then
-  VERSION=$(grep 'The next release version is' /tmp/semantic-output.txt | sed 's/.*The next release version is \(.*\)/\1/')
+if grep -q 'The next release version is' /app/semantic-output.txt; then
+  VERSION=$(grep 'The next release version is' /app/semantic-output.txt | sed 's/.*The next release version is \(.*\)/\1/')
   echo "New version detected: $VERSION"
   echo "$VERSION" > /app/version.txt
 else
