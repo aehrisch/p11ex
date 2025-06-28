@@ -3852,7 +3852,7 @@ static int object_class_from_term(ErlNifEnv* env, ERL_NIF_TERM term, CK_OBJECT_C
   char atom[MAX_OBJECT_CLASS_NAME_LENGTH];
 
   if (enif_get_atom(env, term, atom, sizeof(atom), ERL_NIF_UTF8) <= 0) {
-    return -1; /* term value is not an atom */
+    return -2; /* term value is not an atom */
   }
 
   for (const object_class_map_t *m = object_class_map; m->name != NULL; m++) {
