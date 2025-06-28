@@ -11,6 +11,10 @@ npm install -g semantic-release @semantic-release/changelog @semantic-release/gi
 # Create semantic-release config
 cd /app
 echo "Current directory: $(pwd)"
+
+# Fix Git ownership issues
+git config --global --add safe.directory /app
+
 echo "Git status:"
 git status --porcelain || echo "Git not available"
 echo "Git log --oneline -5:"
