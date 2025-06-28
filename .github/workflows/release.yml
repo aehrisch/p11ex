@@ -1,13 +1,12 @@
 name: Release to Hex.pm
 
 on:
-  push:
-    branches: [ main ]
-    tags: []
+  workflow_dispatch:
 
 jobs:
   calculate-version:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
     outputs:
       version: ${{ steps.version.outputs.version }}
       no_release: ${{ steps.version.outputs.no_release }}
@@ -30,6 +29,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/app \
             -v ${{ github.workspace }}/scripts:/scripts \
+            -v ${{ github.workspace }}/.git:/app/.git \
             ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
             bash /scripts/calculate-version.sh
           
@@ -44,6 +44,15 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "no_release=false" >> $GITHUB_OUTPUT
           echo "Calculated version: $VERSION"
+
+      - name: Upload version calculation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: version-calculation-artifacts
+          path: |
+            version.txt
+            semantic-output.txt
+          retention-days: 30
 
   no-release-needed:
     runs-on: ubuntu-latest
