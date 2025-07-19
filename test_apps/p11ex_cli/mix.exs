@@ -7,18 +7,28 @@ defmodule P11exCli.MixProject do
       app: :p11ex_cli,
       version: "0.1.0",
       elixir: "~> 1.14",
-      escript: [
-        main_module: P11exCli.CLI,
-        name: "p11ex"
-      ],
-      deps: deps()
+      deps: deps(),
+      escript: escript_config()
+    ]
+  end
+
+  def application do
+    [
+      extra_applications: [:logger, :p11ex]
+    ]
+  end
+
+  defp escript_config do
+    [
+      name: "p11ex_cli",
+      main_module: P11exCli
     ]
   end
 
   defp deps do
     [
       {:p11ex, path: "../.."},
-      {:ex_cli, "~> 0.1.6"}
+      {:cli_mate, "== 0.8.1"}
     ]
   end
 end
