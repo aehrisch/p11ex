@@ -87,13 +87,6 @@ jobs:
               SOFTHSM2_CONF=`cat ${{ github.workspace }}/sofhsm-conf.path` \
             mix test --cover --trace --exclude yubikey
 
-      - name: Generate HTML coverage report
-        run: |
-          env MIX_ENV=test \
-              PKCS11_MODULE=${{ github.workspace }}/softhsm/lib/softhsm/libsofthsm2.so \
-              SOFTHSM2_CONF=`cat ${{ github.workspace }}/sofhsm-conf.path` \
-            mix coveralls.html
-
       - name: Upload test results and coverage
         uses: actions/upload-artifact@v4
         with:
@@ -102,6 +95,5 @@ jobs:
             _build/test/lib/*/test-*.xml
             cover/
             cover/excoveralls.json
-            cover/excoveralls.html
             doc/
 
