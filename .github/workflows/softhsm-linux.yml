@@ -49,8 +49,7 @@ jobs:
               mix local.hex --force && \
               mix deps.get && \
               mix compile && \
-              mix test --cover --exclude yubikey && \
-              mix coveralls.html"
+              mix test --cover --exclude yubikey"
 
       - name: Upload test results and coverage (linux-amd64)
         uses: actions/upload-artifact@v4
@@ -60,7 +59,6 @@ jobs:
             _build/test/lib/*/test-*.xml
             cover/
             cover/excoveralls.json
-            cover/excoveralls.html
             doc/
 
       - name: Publish Test Results (linux-amd64)
@@ -109,8 +107,7 @@ jobs:
               mix local.hex --force && \
               mix deps.get && \
               mix compile && \
-              mix test --cover --exclude yubikey && \
-              mix coveralls.html"
+              mix test --cover --exclude yubikey"
 
       - name: Print workspace
         run: |
@@ -125,7 +122,6 @@ jobs:
             _build/test/lib/*/test-*.xml
             cover/
             cover/excoveralls.json
-            cover/excoveralls.html
             doc/
 
       - name: Publish Test Results (linux-arm64)
