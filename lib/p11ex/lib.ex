@@ -448,7 +448,7 @@ defmodule P11ex.Lib do
   @spec session_logout(SessionHandle.t())
     :: :ok | {:error, atom()} | {:error, atom(), any()}
   def session_logout(%SessionHandle{} = session) do
-    n_session_logout(session.module.ref(), session.handle)
+    n_session_logout(session.module.ref, session.handle)
   end
 
   defp slot_to_map(%ModuleHandle{} = module, n_slot) do
