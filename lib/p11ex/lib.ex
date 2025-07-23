@@ -356,21 +356,29 @@ defmodule P11ex.Lib do
 
   @type attributes :: list(attribute())
 
-  @on_load :load_nifs
-
-  def load_nifs do
-    # Path to the compiled NIF library
-    Logger.info("Loading NIF p11ex_nif")
-    path = :filename.join(:code.priv_dir(:p11ex), "p11ex_nif")
-    :erlang.load_nif(path, 0)
-  end
-
-  @spec load_module(String.t()) :: {:ok, Module.t()} | {:error, String.t()}
+  @spec load_module(String.t()) :: {:ok, ModuleHandle.t()} | {:error, String.t()}
   def load_module(path) do
     Logger.info("Loading PKCS#11 module: #{path}")
-    with {:ok, ref} <- n_load_module(String.to_charlist(path)) do
-      Logger.debug("n_load_module returned ref=#{inspect(ref)}")
-      {:ok, %ModuleHandle{path: path, ref: ref}}
+
+    # Try to load NIF if not already loaded
+    case :code.priv_dir(:p11ex) do
+      {:error, :bad_name} ->
+        Logger.warning("p11ex application not loaded, cannot load NIF")
+        {:error, "p11ex application not loaded"}
+      priv_dir when is_list(priv_dir) ->
+        case :erlang.load_nif(:filename.join(priv_dir, "p11ex_nif"), 0) do
+          :ok ->
+            Logger.debug("NIF loaded successfully")
+          {:error, {:load_failed, _}} ->
+            Logger.warning("NIF already loaded or failed to load")
+          {:error, {:bad_lib, _}} ->
+            Logger.warning("NIF library not found")
+        end
+
+        with {:ok, ref} <- n_load_module(String.to_charlist(path)) do
+          Logger.debug("n_load_module returned ref=#{inspect(ref)}")
+          {:ok, %ModuleHandle{path: path, ref: ref}}
+        end
     end
   end
 
@@ -440,7 +448,7 @@ defmodule P11ex.Lib do
   @spec session_logout(SessionHandle.t())
     :: :ok | {:error, atom()} | {:error, atom(), any()}
   def session_logout(%SessionHandle{} = session) do
-    n_session_logout(session.module.ref(), session.handle)
+    n_session_logout(session.module.ref, session.handle)
   end
 
   defp slot_to_map(%ModuleHandle{} = module, n_slot) do

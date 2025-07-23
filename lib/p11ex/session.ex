@@ -33,6 +33,7 @@ defmodule P11ex.Session do
   require Logger
 
   alias P11ex.Lib, as: Lib
+  alias P11ex.Lib.ModuleHandle, as: ModuleHandle
   alias P11ex.Lib.ObjectAttributes, as: ObjectAttributes
   alias P11ex.Lib.ObjectHandle, as: ObjectHandle
   alias P11ex.Module, as: Module
