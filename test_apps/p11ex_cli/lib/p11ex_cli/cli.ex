@@ -1,10 +1,16 @@
 defmodule P11exCli do
   def main([subcommand | rest]) do
     :code.add_patha('_build/dev/lib/p11ex/ebin')
+
+    Logger.configure(level: :warning)
+
     Application.ensure_all_started(:p11ex)
+
+
     case subcommand do
       "help" -> P11exCli.Help.main(rest)
       "list-slots" -> P11exCli.SlotList.main(rest)
+      "list-objects" -> P11exCli.ObjectList.main(rest)
       _ ->
         IO.puts("Unknown subcommand: #{subcommand}")
         print_usage()
@@ -38,9 +44,10 @@ defmodule P11exCli.Help do
   defp show_help(subcommand) do
     case subcommand do
       "list-slots" -> P11exCli.SlotList.format_usage()
+      "list-objects" -> P11exCli.ObjectList.format_usage()
       _ ->
         IO.puts("Unknown subcommand: #{subcommand}")
-        IO.puts("Available subcommands: convert, token, key, list-slots")
+        IO.puts("Available subcommands: list-slots, list-objects")
     end
   end
 end

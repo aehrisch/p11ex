@@ -28,7 +28,8 @@ defmodule P11exCli.MixProject do
   defp deps do
     [
       {:p11ex, path: "../.."},
-      {:cli_mate, "== 0.8.1"}
+      {:cli_mate, "== 0.8.1"},
+      {:jason, "~> 1.4"}
     ]
   end
 end
