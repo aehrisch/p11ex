@@ -23,15 +23,13 @@ defmodule P11ex.MixProject do
       make_targets: ["all"],
       # Hex.pm package configuration
       package: package(),
-      description: "PKCS#11 interface for Elixir"
+      description: "PKCS#11 interface for Elixir",
+      # Documentation configuration
+      docs: docs()
     ]
   end
 
   defp asn1_options, do: [maps: true, der: true, jer: false, verbose: true]
-
-  defp github_repo do
-    "eric/p11ex"
-  end
 
   defp package do
     [
@@ -43,6 +41,40 @@ defmodule P11ex.MixProject do
         "GitHub" => "https://github.com/aehrisch/p11ex",
         "Documentation" => "https://hexdocs.pm/p11ex"
       }
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      name: "P11ex",
+      source_url: "https://github.com/aehrisch/p11ex",
+      homepage_url: "https://github.com/aehrisch/p11ex",
+      extras: [
+        "README.md",
+        "test_apps/p11ex_cli/CLI_DOCUMENTATION.md": [title: "CLI Tool Documentation"],
+        "CHANGELOG.md": [title: "Changelog"]
+      ],
+      groups_for_modules: [
+        "Core Modules": [
+          P11ex,
+          P11ex.Module,
+          P11ex.Session,
+          P11ex.SessionPoolSupervisor
+        ],
+        "Data Structures": [
+          P11ex.Lib,
+          P11ex.Lib.Slot,
+          P11ex.Lib.SessionHandle,
+          P11ex.Lib.ObjectHandle,
+          P11ex.Lib.ObjectAttributes,
+          P11ex.Lib.ModuleHandle
+        ],
+        "Flags and Parameters": [
+          P11ex.Flags,
+          P11ex.ECParam
+        ]
+      ]
     ]
   end
 

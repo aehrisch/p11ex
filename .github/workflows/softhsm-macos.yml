@@ -87,6 +87,12 @@ jobs:
               SOFTHSM2_CONF=`cat ${{ github.workspace }}/sofhsm-conf.path` \
             mix test --cover --trace --exclude yubikey
 
+      - name: Build p11ex_cli escript
+        run: |
+          cd test_apps/p11ex_cli
+          mix deps.get
+          mix escript.build
+
       - name: Upload test results and coverage
         uses: actions/upload-artifact@v4
         with:
@@ -96,4 +102,5 @@ jobs:
             cover/
             cover/excoveralls.json
             doc/
+            test_apps/p11ex_cli/p11ex_cli
 

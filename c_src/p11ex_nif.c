@@ -16,7 +16,7 @@
 
 /* debugging macros */
 
-# define P11_DEBUG 1
+# define P11_DEBUG 0
 
 #define P11_debug(format, ...) \
   if (P11_DEBUG) { \

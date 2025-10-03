@@ -108,7 +108,11 @@ jobs:
               mix local.hex --force && \
               mix deps.get && \
               mix compile && \
-              mix test --exclude yubikey"
+              mix test --exclude yubikey && \
+              # Build p11ex_cli escript
+              cd test_apps/p11ex_cli && \
+              mix deps.get && \
+              mix escript.build"
 
       - name: Upload linux-amd64 artifacts
         uses: actions/upload-artifact@v4
@@ -117,6 +121,7 @@ jobs:
           path: |
             _build/
             priv/
+            test_apps/p11ex_cli/p11ex_cli
 
   build-linux-arm64:
     runs-on: [self-hosted, Linux, ARM64]
@@ -152,7 +157,11 @@ jobs:
               mix local.hex --force && \
               mix deps.get && \
               mix compile && \
-              mix test --exclude yubikey"
+              mix test --exclude yubikey && \
+              # Build p11ex_cli escript
+              cd test_apps/p11ex_cli && \
+              mix deps.get && \
+              mix escript.build"
 
       - name: Upload linux-arm64 artifacts
         uses: actions/upload-artifact@v4
@@ -161,6 +170,7 @@ jobs:
           path: |
             _build/
             priv/
+            test_apps/p11ex_cli/p11ex_cli
 
   build-macos-arm64:
     runs-on: macos-latest
@@ -234,6 +244,12 @@ jobs:
               SOFTHSM2_CONF=`cat ${{ github.workspace }}/sofhsm-conf.path` \
             mix test --cover --trace --exclude yubikey
 
+      - name: Build p11ex_cli escript
+        run: |
+          cd test_apps/p11ex_cli
+          mix deps.get
+          mix escript.build
+
       - name: Upload macos-arm64 artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -241,6 +257,7 @@ jobs:
           path: |
             _build/
             priv/
+            test_apps/p11ex_cli/p11ex_cli
 
   release:
     runs-on: ubuntu-latest
@@ -309,9 +326,26 @@ jobs:
             cp -r artifacts/macos-arm64-artifacts/priv/* priv/
           fi
           
+          # Create CLI binaries directory and copy CLI executables
+          mkdir -p cli-binaries
+          
+          if [ -f "artifacts/linux-amd64-artifacts/test_apps/p11ex_cli/p11ex_cli" ]; then
+            cp artifacts/linux-amd64-artifacts/test_apps/p11ex_cli/p11ex_cli cli-binaries/p11ex_cli-linux-amd64
+          fi
+          
+          if [ -f "artifacts/linux-arm64-artifacts/test_apps/p11ex_cli/p11ex_cli" ]; then
+            cp artifacts/linux-arm64-artifacts/test_apps/p11ex_cli/p11ex_cli cli-binaries/p11ex_cli-linux-arm64
+          fi
+          
+          if [ -f "artifacts/macos-arm64-artifacts/test_apps/p11ex_cli/p11ex_cli" ]; then
+            cp artifacts/macos-arm64-artifacts/test_apps/p11ex_cli/p11ex_cli cli-binaries/p11ex_cli-macos-arm64
+          fi
+          
           # List what we have
           echo "Combined binaries:"
           find priv -type f
+          echo "CLI binaries:"
+          find cli-binaries -type f
 
       - name: Download PKCS11 headers
         run: |
@@ -371,5 +405,12 @@ jobs:
             - Linux AMD64
             - Linux ARM64  
             - macOS ARM64
+            
+            ## CLI Tool
+            
+            Pre-compiled CLI executables are also available for:
+            - Linux AMD64: `p11ex_cli-linux-amd64`
+            - Linux ARM64: `p11ex_cli-linux-arm64`
+            - macOS ARM64: `p11ex_cli-macos-arm64`
           draft: false
           prerelease: false 

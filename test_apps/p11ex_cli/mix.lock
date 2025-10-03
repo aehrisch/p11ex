@@ -1,0 +1,9 @@
+%{
+  "asn1_compiler": {:hex, :asn1_compiler, "0.1.1", "64a4e52b59d1f225878445ace2c75cd2245b13a5a81182304fd9dc5acfc8994e", [:mix], [], "hexpm", "c250d24c22f1a3f305d88864400f9ac2df55c6886e1e3a030e2946efeb94695e"},
+  "cli_mate": {:hex, :cli_mate, "0.8.1", "376fdc710b9d8936205d4a7d0da98ea76d99f7390ec035242591798c14584e6c", [:mix], [], "hexpm", "553cebbecd823936588854fe185f31ac39d96d66f5db7ddcb107e40a6da0adfe"},
+  "elixir_make": {:hex, :elixir_make, "0.9.0", "6484b3cd8c0cee58f09f05ecaf1a140a8c97670671a6a0e7ab4dc326c3109726", [:mix], [], "hexpm", "db23d4fd8b757462ad02f8aa73431a426fe6671c80b200d9710caf3d1dd0ffdb"},
+  "ex_cli": {:hex, :ex_cli, "0.1.6", "30f97ef0751c75863c669cf34ebb689a5a3ebf9dafd2e73739f173fbd7561a53", [:mix], [], "hexpm", "9b6e4e89f457f6805ae47a0fc0004bae804d894c85976dfd5b47330737dccf7b"},
+  "jason": {:hex, :jason, "1.4.4", "b9226785a9aa77b6857ca22832cffa5d5011a667207eb2a0ad56adb5db443b8a", [:mix], [{:decimal, "~> 1.0 or ~> 2.0", [hex: :decimal, repo: "hexpm", optional: true]}], "hexpm", "c5eb0cab91f094599f94d55bc63409236a8ec69a21a67814529e8d5f6cc90b3b"},
+  "optimus": {:hex, :optimus, "0.5.1", "cfa45641901f63ead47f7ed1f22d7c9c2e74bf9e32756beef3ac5334fe0b01ff", [:mix], [], "hexpm", "95c669e25e05e7f2a47bc1ff25ac237a19505f56135e9bfe88bc63ddbe60c07a"},
+  "poolboy": {:hex, :poolboy, "1.5.2", "392b007a1693a64540cead79830443abf5762f5d30cf50bc95cb2c1aaafa006b", [:rebar3], [], "hexpm", "dad79704ce5440f3d5a3681c8590b9dc25d1a561e8f5a9c995281012860901e3"},
+}
