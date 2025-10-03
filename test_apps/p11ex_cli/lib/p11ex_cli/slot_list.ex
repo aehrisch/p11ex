@@ -12,6 +12,7 @@ defmodule P11exCli.SlotList do
       ]
     ],
     arguments: []
+    
   def main(args) do
     res = CLI.parse_or_halt!(args, @command)
     module = P11exCli.Common.load_module(res.options)

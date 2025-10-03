@@ -152,4 +152,30 @@ defmodule P11exCli.Common do
     inspect(v)
   end
 
+  def attrib_for_ref(ref_str) do
+    cond do: (
+      String.match?(ref_str, ~r/^label:/) ->
+        {:cka_label, String.slice(ref_str, 6..String.length(ref_str))}
+
+      String.match?(ref_str, ~r/^id:[[:xdigit:]]+/) ->
+        case Base.decode16(String.slice(ref_str, 3..String.length(ref_str)), case: :lower) do
+          {:ok, id_bin} ->
+            {:cka_id, id_bin}
+          {:error, _} ->
+            {:error, "Invalid ID format"}
+        end
+
+      String.match?(ref_str, ~r/^handle:[[:digit]]+/) ->
+        case Integer.parse(String.slice(ref_str, 7..String.length(ref_str))) do
+          {handle, ""} ->
+            {:cka_handle, handle}
+          _ ->
+            {:error, "Invalid handle format"}
+        end
+
+      true ->
+        {:error, "Invalid reference format"}
+    )
+  end
+
 end

@@ -9,7 +9,8 @@ defmodule P11exCli.ObjectList do
         type: :string,
         required: true,
         doc: "Object type to list (seck, prvk, pubk)"
-      ]
+      ],
+      
     ]
   def main(args) do
     res = CLI.parse_or_halt!(args, @command)
