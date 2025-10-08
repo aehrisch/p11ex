@@ -687,6 +687,7 @@ defmodule P11ex.Lib do
   Example:
 
   ```elixir
+  source_data = :crypto.strong_rand_bytes(16)
   :ok = P11ex.Session.encrypt_init(session, {:ckm_rsa_pkcs_oaep, %{hash_alg: :sha, mgf_hash_alg: :sha, source_data: source_data}}, pub_key)
   {:ok, ciphertext} = P11ex.Session.encrypt(session, data)
   ```
