@@ -33,7 +33,6 @@ defmodule P11ex.Session do
   require Logger
 
   alias P11ex.Lib, as: Lib
-  alias P11ex.Lib.ModuleHandle, as: ModuleHandle
   alias P11ex.Lib.ObjectAttributes, as: ObjectAttributes
   alias P11ex.Lib.ObjectHandle, as: ObjectHandle
   alias P11ex.Module, as: Module
@@ -487,8 +486,36 @@ defmodule P11ex.Session do
     GenServer.call(server, {:generate_key_pair, mechanism, pub_key_template, priv_key_template})
   end
 
+  @doc """
+  Wrap (encyrpt) a key using the specified `mechanism` and `wrapping_key_handle` and
+  return it as a byte array. This representation can be used to store the key externally
+  and later load it into the session or token again using `unwrap_key/5`.
+
+  See `P11ex.Lib.wrap_key/4` for more information on mechanisms and their parameters.
+  """
+  @spec wrap_key(server :: GenServer.server(), Lib.mechanism_instance(), ObjectHandle.t(), ObjectHandle.t())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  def wrap_key(server \\ __MODULE__, mechanism, wrapping_key_handle, key_handle)
+      when is_tuple(mechanism) do
+    GenServer.call(server, {:wrap_key, mechanism, wrapping_key_handle, key_handle})
+  end
+
+  @doc """
+  Unwrap (decrypt) a key using the specified `mechanism` and `unwrapping_key_handle` and
+  return it as a key object in the session or token.
+
+  See `P11ex.Lib.unwrap_key/5` for more information on mechanisms and their parameters.
+  """
+  @spec unwrap_key(server :: GenServer.server(), Lib.mechanism_instance(), ObjectHandle.t(), binary(), Lib.attributes())
+    :: {:ok, ObjectHandle.t()} | {:error, atom()} | {:error, atom(), any()}
+  def unwrap_key(server \\ __MODULE__, mechanism, unwrapping_key_handle, wrapped_key_bytes, attribute_template)
+      when is_tuple(mechanism) do
+    GenServer.call(server, {:unwrap_key, mechanism, unwrapping_key_handle, wrapped_key_bytes, attribute_template})
+  end
+
   ###
   ### Implementation of callbacks
+  ###
 
   @impl true
   def handle_call(:info, _from, state) do
@@ -597,6 +624,7 @@ defmodule P11ex.Session do
     end
   end
 
+  @impl true
   def handle_call({:encrypt_update, data}, _from, state) do
     case Lib.encrypt_update(state.session, data) do
       {:ok, op} -> {:reply, {:ok, op}, state}
@@ -604,6 +632,7 @@ defmodule P11ex.Session do
     end
   end
 
+  @impl true
   def handle_call(:encrypt_final, _from, state) do
     case Lib.encrypt_final(state.session) do
       {:ok, op} -> {:reply, {:ok, op}, %{state | current_op: nil}}
@@ -611,6 +640,7 @@ defmodule P11ex.Session do
     end
   end
 
+  @impl true
   def handle_call({:decrypt_init, mechanism, %ObjectHandle{} = key}, _from, state) do
     case Lib.decrypt_init(state.session, mechanism, key) do
       {:ok, op} -> {:reply, {:ok, op}, %{state | current_op: :decrypt}}
@@ -618,6 +648,7 @@ defmodule P11ex.Session do
     end
   end
 
+  @impl true
   def handle_call({:decrypt_update, data}, _from, state) do
     case Lib.decrypt_update(state.session, data) do
       {:ok, op} -> {:reply, {:ok, op}, state}
@@ -625,6 +656,7 @@ defmodule P11ex.Session do
     end
   end
 
+  @impl true
   def handle_call(:decrypt_final, _from, state) do
     case Lib.decrypt_final(state.session) do
       {:ok, op} -> {:reply, {:ok, op}, %{state | current_op: nil}}
@@ -742,6 +774,24 @@ defmodule P11ex.Session do
       when is_tuple(mechanism) do
     case Lib.generate_key_pair(state.session, mechanism, pub_key_template, priv_key_template) do
       {:ok, pub_key_handle, priv_key_handle} -> {:reply, {:ok, pub_key_handle, priv_key_handle}, state}
+      err -> {:reply, err, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:wrap_key, mechanism, wrapping_key_handle, key_handle}, _from, state)
+      when is_tuple(mechanism) do
+    case Lib.wrap_key(state.session, mechanism, wrapping_key_handle, key_handle) do
+      {:ok, wrapped_key} -> {:reply, {:ok, wrapped_key}, state}
+      err -> {:reply, err, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:unwrap_key, mechanism, unwrapping_key_handle, wrapped_key_bytes, attribute_template}, _from, state)
+      when is_tuple(mechanism) do
+    case Lib.unwrap_key(state.session, mechanism, unwrapping_key_handle, wrapped_key_bytes, attribute_template) do
+      {:ok, key_handle} -> {:reply, {:ok, key_handle}, state}
       err -> {:reply, err, state}
     end
   end

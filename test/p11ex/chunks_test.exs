@@ -151,7 +151,7 @@ defmodule P11ex.ChunksTest do
     data_sizes = [5, 16, 32, 128, 256, 1024, 8192, 16_384]
     part_sizes = [3, 8, 16, 64, 100, 256]
 
-    {pubk, prvk} = P11exRSATestHelper.gen_keypair(context.session_pid)
+    {pubk, prvk} = RSATestHelper.gen_keypair(context.session_pid)
 
     data_sizes
     |> Enum.each(fn data_size ->

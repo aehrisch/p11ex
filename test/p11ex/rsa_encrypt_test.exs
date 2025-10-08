@@ -31,7 +31,7 @@ defmodule P11ex.RsaEncryptTest do
 
   test "encrypt/decrypt with RSA OAEP", %{session_pid: session_pid} = context do
 
-    {pubk, prvk} = P11exRSATestHelper.gen_keypair(session_pid)
+    {pubk, prvk} = RSATestHelper.gen_keypair(session_pid)
 
     plain_data = :crypto.strong_rand_bytes(128)
     source_data = :crypto.strong_rand_bytes(16)
@@ -63,7 +63,7 @@ defmodule P11ex.RsaEncryptTest do
 
   test "RSA OAEP with invalid hash parameters", %{session_pid: session_pid} = context do
 
-    {pubk, prvk} = P11exRSATestHelper.gen_keypair(session_pid)
+    {pubk, prvk} = RSATestHelper.gen_keypair(session_pid)
     plain_data = :crypto.strong_rand_bytes(128)
 
     [
@@ -80,7 +80,7 @@ defmodule P11ex.RsaEncryptTest do
 
   test "RSA OAEP with invalid mgf hash parameters", %{session_pid: session_pid} = context do
 
-    {pubk, prvk} = P11exRSATestHelper.gen_keypair(session_pid)
+    {pubk, prvk} = RSATestHelper.gen_keypair(session_pid)
     plain_data = :crypto.strong_rand_bytes(128)
 
     [
@@ -97,7 +97,7 @@ defmodule P11ex.RsaEncryptTest do
 
   test "RSA OAEP with missing parameters", %{session_pid: session_pid} = context do
 
-    {pubk, prvk} = P11exRSATestHelper.gen_keypair(session_pid)
+    {pubk, prvk} = RSATestHelper.gen_keypair(session_pid)
     plain_data = :crypto.strong_rand_bytes(128)
 
     mechanism = {:ckm_rsa_pkcs_oaep, %{}}

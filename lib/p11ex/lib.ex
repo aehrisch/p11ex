@@ -1107,6 +1107,84 @@ defmodule P11ex.Lib do
     end
   end
 
+  @doc """
+  This functions wraps (encrypts) a key using a wrapping key. The result is a byte
+  array that contains the encrypted key. The function `unwrap_key/5` can be used to
+  decrypt the key and load it into the session or token. Typically, these functions
+  are use to externalize keys (e.g. for storing them in a database), to import
+  pre-existing keys, or to migrate keys between tokens.
+
+  The set of supported combinations of wrapping key type, wrapped key type,
+  and mechanism is limited and mostly specific to the token. Here are some examples
+  that should be supported according to the PKCS#11 specification:
+
+  - Wrapping an AES secret with an AES secret key
+  - Wrapping a RSA or EC private key with an AES secret key
+  - Wrapping an RSA secret key or an AES secret key with an RSA public key
+
+  Typical mechanisms are:
+
+  - `{:ckm_aes_key_wrap_pad}`
+  - `{:ckm_rsa_pkcs}`
+  - `{:ckm_rsa_pkcs_oaep}`
+
+  Wrapping keys must be marked as wrapping keys by setting the `:cka_wrap` attribute
+  to `true`. The target key must be marked as extractable by setting the
+  `:cka_extractable` attribute to `true`. There may be further restrictions depending
+  on the token.
+  """
+  @spec wrap_key(SessionHandle.t(), mechanism_instance(), ObjectHandle.t(), ObjectHandle.t())
+    :: {:ok, binary()} | {:error, atom()} | {:error, atom(), any()}
+  def wrap_key(
+    %SessionHandle{} = session,
+    mechanism,
+    %ObjectHandle{} = wrapping_key_handle,
+    %ObjectHandle{} = key_handle) do
+
+    n_wrap_key(
+      session.module.ref,
+      session.handle,
+      mechanism,
+      wrapping_key_handle.handle, key_handle.handle)
+  end
+
+  @doc """
+  This functions interprets the byte array `wrapped_key_bytes` as an encrypted key,
+  decrypts it using the unwrapping key `unwrapping_key_handle`, and creates a private key
+  or secret key object in the session or token. See `wrap_key/4` for more information on
+  wrapping keys. Typically, these functions are use to import externalized keys or to migrate
+  keys between tokens.
+
+  The set of supported combinations of unwrapping key type, wrapped key type, and mechanism
+  is limited and mostly specific to the token. See `wrap_key/4` for more information on this
+  topic.
+
+  Unwrapping keys are secret keys or private keys that have the `:cka_unwrap` attribute
+  set to `true`.
+  """
+  @spec unwrap_key(SessionHandle.t(), mechanism_instance(), ObjectHandle.t(), binary(), attributes())
+    :: {:ok, ObjectHandle.t()} | {:error, atom()} | {:error, atom(), any()}
+  def unwrap_key(
+    %SessionHandle{} = session,
+    mechanism,
+    %ObjectHandle{} = unwrapping_key_handle,
+    wrapped_key_bytes,
+    attributes) when is_binary(wrapped_key_bytes) and is_list(attributes) do
+
+    Logger.debug("unwrap_key: session=#{inspect(session)}, mechanism=#{inspect(mechanism)}, unwrapping_key_handle=#{inspect(unwrapping_key_handle)}, attributes=#{inspect(attributes)}")
+    with {:ok, attribs} <- process_attributes(attributes) do
+      case n_unwrap_key(session.module.ref,
+            session.handle,
+            mechanism,
+            unwrapping_key_handle.handle,
+            wrapped_key_bytes,
+            attribs) do
+        {:ok, handle} -> {:ok, ObjectHandle.new(session, handle)}
+        error -> error
+      end
+    end
+  end
+
   #   _   _      _                   _____                 _   _
   #  | | | | ___| |_ __   ___ _ __  |  ___|   _ _ __   ___| |_(_) ___  _ __  ___
   #  | |_| |/ _ \ | '_ \ / _ \ '__| | |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __|
@@ -1315,4 +1393,15 @@ defmodule P11ex.Lib do
     :erlang.nif_error("NIF generate_key_pair/5 not implemented")
   end
 
+  defp n_wrap_key(_p11_module, _session, _mechanism,
+    _wrapping_key_handle, _key_handle) do
+    # This function will be implemented in NIF
+    :erlang.nif_error("NIF wrap_key/5 not implemented")
+  end
+
+  defp n_unwrap_key(_p11_module, _session, _mechanism,
+    _unwrapping_key_handle, _wrapped_key_bytes, _attribute_template) do
+    # This function will be implemented in NIF
+    :erlang.nif_error("NIF unwrap_key/6 not implemented")
+  end
 end
