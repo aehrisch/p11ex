@@ -14,7 +14,7 @@ defmodule P11exTest.RsaSign do
   end
 
   test "sign CKM_RSA_PKCS", context do
-    {pubk, prvk} = P11exRSATestHelper.gen_keypair(context.session_pid)
+    {pubk, prvk} = RSATestHelper.gen_keypair(context.session_pid)
 
     # read the public key and make a public key record useable with the Erlang public_key module
     {:ok, pubk_attrs, []} = Session.read_object(context.session_pid, pubk, Lib.ObjectAttributes.rsa_public_key())
@@ -47,7 +47,7 @@ defmodule P11exTest.RsaSign do
   end
 
   test "sign CKM_RSA_PKCS_PSS", context do
-    {pubk, prvk} = P11exRSATestHelper.gen_keypair(context.session_pid)
+    {pubk, prvk} = RSATestHelper.gen_keypair(context.session_pid)
 
     # read the public key and make a public key record useable with the Erlang public_key module
     {:ok, pubk_attrs, []} = Session.read_object(context.session_pid, pubk, Lib.ObjectAttributes.rsa_public_key())

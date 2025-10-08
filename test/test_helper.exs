@@ -88,9 +88,55 @@ defmodule YubikeyTestHelper do
   end
 end
 
-defmodule P11exRSATestHelper do
+defmodule KeyWrappingTestHelper do
 
-  def gen_keypair(session_pid) do
+  def gen_aes_wrapping_key(session_pid) do
+    mechanism = {:ckm_aes_key_gen}
+    template = [
+      {:cka_token, true},
+      {:cka_label, "aes_wrapping_key"},
+      {:cka_wrap, true},
+      {:cka_unwrap, true},
+      {:cka_value_len, 32}
+    ]
+
+    {:ok, key} = P11ex.Session.generate_key(session_pid, mechanism, template)
+    key
+  end
+
+  def gen_rsa_wrapping_key(session_pid) do
+
+    mechanism = {:ckm_rsa_pkcs_key_pair_gen}
+    key_id = :crypto.strong_rand_bytes(16)
+
+    pubk_template = [
+      {:cka_token, true},
+      {:cka_modulus_bits, 3072},
+      {:cka_label, "rsa_wrap_key"},
+      {:cka_wrap, true},
+      {:cka_id, key_id}
+    ]
+
+    prvk_template = [
+      {:cka_token, true},
+      {:cka_label, "rsa_wrap_key"},
+      {:cka_unwrap, true},
+      {:cka_extractable, false},
+      {:cka_id, key_id}
+    ]
+
+    {:ok, {pubk, prvk}} =
+      P11ex.Session.generate_key_pair(session_pid,
+      {:ckm_rsa_pkcs_key_pair_gen},
+      pubk_template, prvk_template)
+    {pubk, prvk}
+  end
+
+end
+
+defmodule RSATestHelper do
+
+  def gen_keypair(session_pid, extractable \\ false) do
 
     mechanism = {:ckm_rsa_pkcs_key_pair_gen}
 
@@ -100,7 +146,8 @@ defmodule P11exRSATestHelper do
       {:cka_verify, true},
       {:cka_modulus_bits, 2048},
       {:cka_public_exponent, 65_537},
-      {:cka_label, "rsa_test_key"}
+      {:cka_label, "rsa_test_key"},
+      {:cka_wrap, true}
     ]
 
     prvk_template = [
@@ -109,7 +156,9 @@ defmodule P11exRSATestHelper do
       {:cka_sensitive, true},
       {:cka_decrypt, true},
       {:cka_sign, true},
-      {:cka_label, "rsa_test_key"}
+      {:cka_label, "rsa_test_key"},
+      {:cka_unwrap, true},
+      {:cka_extractable, extractable}
     ]
 
     {:ok, {pubk, prvk}} =
@@ -122,7 +171,7 @@ end
 
 defmodule ECSignTestHelper do
 
-  def gen_keypair(session_pid, curve) do
+  def gen_keypair(session_pid, curve, extractable \\ false) do
 
     key_id = :crypto.strong_rand_bytes(16)
     mechanism = {:ckm_ec_key_pair_gen}
@@ -143,7 +192,8 @@ defmodule ECSignTestHelper do
       {:cka_key_type, :ckk_ec},
       {:cka_sign, true},
       {:cka_label, "prvk-#{curve}"},
-      {:cka_id, key_id}
+      {:cka_id, key_id},
+      {:cka_extractable, extractable}
     ]
 
     {:ok, {pubk, prvk}} =
@@ -152,6 +202,14 @@ defmodule ECSignTestHelper do
     {pubk, prvk}
   end
 
+end
+
+defmodule CryptoTestHelper do
+
+  def compute_kcv(session_pid, key) do
+    {:ok, kcv} = P11ex.Session.encrypt(session_pid, {:ckm_aes_ecb}, key, <<0::size(128)>>)
+    {:ok, binary_part(kcv, 0, 3)}
+  end
 end
 
 defmodule TestSupervisor do

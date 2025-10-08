@@ -14,6 +14,9 @@
 #define FIND_OBJ_MAX_HITS 8192
 #define ATTRIBUTE_BUFFER_SIZE 4096
 
+/* currently we use a fixed size buffer for the wrapped key */
+#define WRAPPED_KEY_BUFFER_SIZE 32768
+
 /* debugging macros */
 
 # define P11_DEBUG 0
@@ -235,6 +238,9 @@ static ERL_NIF_TERM generate_key_pair(ErlNifEnv* env, int argc, const ERL_NIF_TE
 static ERL_NIF_TERM destroy_object(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM list_mechanisms(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM mechanism_info(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+
+static ERL_NIF_TERM wrap_key(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM unwrap_key(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 
 /* Forward declarations for functions that are internal to this module */
 void resource_cleanup(ErlNifEnv* env, void* obj);
@@ -635,7 +641,9 @@ static ErlNifFunc nif_funcs[] = {
   {"n_digest_update", 3, digest_update},
   {"n_digest_final", 2, digest_final},
   {"n_digest", 3, digest},
-  {"n_generate_key_pair", 5, generate_key_pair}
+  {"n_generate_key_pair", 5, generate_key_pair},
+  {"n_wrap_key", 5, wrap_key},
+  {"n_unwrap_key", 6, unwrap_key}
 };
 
 /* Implementation of load_module/1: Load a PKCS#11 module, get the function list, 
@@ -3680,6 +3688,157 @@ static ERL_NIF_TERM generate_key_pair(ErlNifEnv* env, int argc, const ERL_NIF_TE
   return enif_make_tuple2(env, enif_make_atom(env, "ok"), handle_tuple);
 }
 
+/*
+         _       __                       _            
+        | |     / /________ _____  ____  (_)___  ____ _
+        | | /| / / ___/ __ `/ __ \/ __ \/ / __ \/ __ `/
+        | |/ |/ / /  / /_/ / /_/ / /_/ / / / / / /_/ / 
+        |__/|__/_/   \__,_/ .___/ .___/_/_/ /_/\__, /  
+                         /_/   /_/            /____/   
+*/
+
+static ERL_NIF_TERM wrap_key(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  CK_MECHANISM mechanism = {0};
+  ERL_NIF_TERM mech_conversion_result;
+  CK_OBJECT_HANDLE wrapping_key_handle = 0;
+  CK_OBJECT_HANDLE key_handle = 0;
+  ErlNifBinary wrapped_key = {0};
+  ERL_NIF_TERM wrapped_key_term;
+  CK_ULONG actual_wrapped_key_size = 0;
+
+  P11_debug("wrap_key: enter");
+  REQUIRE_ARGS(env, argc, 5);
+
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[1]: session handle */
+  ULONG_ARG(env, argv[1], session_handle);
+
+  /* argv[2]: mechanism */
+  if (!enif_is_tuple(env, argv[2])) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[3]: wrapping key handle */
+  ULONG_ARG(env, argv[3], wrapping_key_handle);
+
+  /* argv[4]: key handle */
+  ULONG_ARG(env, argv[4], key_handle);
+
+  mech_conversion_result = term_to_mechanism(env, argv[2], &mechanism);
+  P11_debug("wrap_key: mech_conversion_result=%T", mech_conversion_result);
+  if (enif_compare(mech_conversion_result, enif_make_atom(env, "ok")) != 0) {
+    return mech_conversion_result;
+  }
+  P11_debug("wrap_key: converted mechanism %p", &mechanism);
+  P11_debug_mechanism(&mechanism);
+
+  if (!enif_alloc_binary(WRAPPED_KEY_BUFFER_SIZE, &wrapped_key)) {
+    return P11_memory_error(env, "wrap_key");
+  }
+  secure_zero(wrapped_key.data, wrapped_key.size);
+
+  actual_wrapped_key_size = wrapped_key.size;
+  P11_call(rv, p11_module, C_WrapKey, 
+      session_handle, &mechanism, 
+      wrapping_key_handle, key_handle, 
+      wrapped_key.data, &actual_wrapped_key_size);
+  if (rv != CKR_OK) {
+    enif_release_binary(&wrapped_key);
+    return P11_error(env, "C_WrapKey", rv);
+  }
+  P11_debug("C_WrapKey result length: %lu", actual_wrapped_key_size);
+
+  if (!enif_realloc_binary(&wrapped_key, actual_wrapped_key_size)) {
+    return P11_memory_error(env, "wrap_key");
+  }
+  wrapped_key_term = enif_make_binary(env, &wrapped_key);
+
+  return enif_make_tuple2(env, enif_make_atom(env, "ok"), wrapped_key_term);  
+}
+
+static ERL_NIF_TERM unwrap_key(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+
+  CK_RV rv = CKR_GENERAL_ERROR;
+  p11_module_t* p11_module = NULL;
+  CK_SESSION_HANDLE session_handle = 0;
+  CK_MECHANISM mechanism = {0};
+  ERL_NIF_TERM mech_conversion_result;
+  CK_OBJECT_HANDLE unwrapping_key_handle = 0;
+  ErlNifBinary wrapped_key_bytes = {0};
+  CK_ATTRIBUTE_PTR attribute_list = NULL;
+  CK_ULONG attribute_count = 0;
+  ERL_NIF_TERM attr_conversion_result;
+  CK_OBJECT_HANDLE key_handle = 0;
+
+  P11_debug("unwrap_key: enter");
+  REQUIRE_ARGS(env, argc, 6);
+
+  /* argv[0]: p11_module */
+  if (!enif_get_resource(env, argv[0], p11_module_resource_type, (void**)&p11_module)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[1]: session handle */
+  ULONG_ARG(env, argv[1], session_handle);
+
+  /* argv[2]: mechanism type */
+  mech_conversion_result = term_to_mechanism(env, argv[2], &mechanism);
+  if (enif_compare(mech_conversion_result, enif_make_atom(env, "ok")) != 0) {
+    return mech_conversion_result;
+  }
+  P11_debug("unwrap_key: converted mechanism %p", &mechanism);
+  P11_debug_mechanism(&mechanism);
+
+  /* argv[3]: unwrapping key handle */
+  ULONG_ARG(env, argv[3], unwrapping_key_handle);
+
+  /* argv[4]: wrapped key bytes */
+  if (!enif_inspect_binary(env, argv[4], &wrapped_key_bytes)) {
+    return enif_make_badarg(env);
+  }
+
+  /* argv[5]: private key template */
+  if (!enif_is_list(env, argv[5])) {
+    if (mechanism.pParameter != NULL) {
+      free(mechanism.pParameter);
+    }
+    return enif_make_badarg(env);
+  }
+  /* convert attribute template */
+  attr_conversion_result = term_to_attributes(env, argv[5], &attribute_list, &attribute_count);
+  if (enif_compare(attr_conversion_result, enif_make_atom(env, "ok")) != 0) {
+    if (mechanism.pParameter != NULL) {
+      free(mechanism.pParameter);
+    }
+    return attr_conversion_result;
+  }
+
+  P11_call(rv, p11_module, C_UnwrapKey, session_handle, &mechanism,
+    unwrapping_key_handle, wrapped_key_bytes.data, wrapped_key_bytes.size,
+    attribute_list, attribute_count, &key_handle);
+
+  if (mechanism.pParameter != NULL) {
+    free(mechanism.pParameter);
+  }
+  if (attribute_list != NULL) {
+    free(attribute_list);
+  }
+
+  if (rv != CKR_OK) {
+    return P11_error(env, "C_UnwrapKey", rv);
+  }
+
+  P11_debug("C_UnwrapKey result key_handle=%lu", key_handle);
+  return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_ulong(env, key_handle));
+}
 
 
 
