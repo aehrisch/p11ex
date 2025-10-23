@@ -81,6 +81,10 @@ jobs:
               fi && \
               # Run CLI tests
               echo '### Running CLI tests with existing token' && \
+              mix local.hex --force && \
+              mix deps.get && \
+              mix compile && \
+              mix escript.build && \
               exec env MIX_ENV=test mix coveralls.html"
 
       - name: Upload CLI binary and test results
