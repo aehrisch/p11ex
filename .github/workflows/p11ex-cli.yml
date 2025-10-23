@@ -1,0 +1,102 @@
+name: p11ex_cli Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build-and-test-cli-linux-amd64:
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: write
+      contents: read
+      packages: read
+    
+    steps:
+      - name: Cleanup workspace
+        run: |
+          sudo rm -rf ${{ github.workspace }}/*
+
+      - uses: actions/checkout@v4
+
+      - name: Pull linux-amd64 image
+        run: |
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64
+
+      - name: Build p11ex library and p11ex_cli binary
+        run: |
+          docker run --rm \
+            -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+            -e MIX_ENV=test \
+            -e GITHUB_EVENT_PATH=/github/event.json \
+            -v ${{ github.workspace }}:/app \
+            -v ${{ github.event_path }}:/github/event.json \
+            ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
+            sh -c "cd /app && \
+              export SOFTHSM2_CONF=\$(mktemp) && \
+              export MAKE_TOKEN_DIR=yes && \
+              sh test/softhsm-reset.sh && \
+              cd c_src && \
+              curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h && \
+              curl -z pkcs11t.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h && \
+              curl -z pkcs11f.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h && \
+              cd .. && \
+              # Install hex and get dependencies
+              mix local.hex --force && \
+              mix deps.get && \
+              mix compile && \
+              mix test --cover --exclude yubikey && \
+              # Build p11ex_cli escript
+              cd test_apps/p11ex_cli && \
+              mix deps.get && \
+              mix escript.build"
+
+      - name: Run p11ex_cli tests
+        run: |
+          docker run --rm \
+            -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+            -e MIX_ENV=test \
+            -e GITHUB_EVENT_PATH=/github/event.json \
+            -v ${{ github.workspace }}:/app \
+            -v ${{ github.event_path }}:/github/event.json \
+            ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
+            sh -c "cd /app && \
+              # Initialize base SoftHSM token for p11ex library tests
+              export SOFTHSM2_CONF=\$(mktemp) && \
+              export MAKE_TOKEN_DIR=yes && \
+              sh test/softhsm-reset.sh && \
+              # Navigate to CLI directory and setup CLI-specific token
+              cd test_apps/p11ex_cli && \
+              if [ ! -d 'token' ]; then \
+                echo '### CLI token directory does not exist, initializing' && \
+                mkdir -p token && \
+                source ./cli-softhsm-init.sh; \
+              fi && \
+              # Set environment variables for CLI tests
+              export TEST_P11EX_PIN=1234 && \
+              export TEST_P11EX_MODULE=/usr/lib/softhsm/libsofthsm2.so && \
+              export TEST_P11EX_TOKEN_LABEL=Token_0 && \
+              export SOFTHSM_PREFIX=/usr && \
+              export P11TOOL_PREFIX=/usr && \
+              export SOFTHSM2_CONF=cli-softhsm.conf && \
+              # Run CLI tests
+              echo '### Running CLI tests with existing token' && \
+              exec env MIX_ENV=test mix coveralls.html"
+
+      - name: Upload CLI binary and test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: p11ex-cli-linux-amd64.zip
+          path: |
+            test_apps/p11ex_cli/p11ex_cli
+            test_apps/p11ex_cli/cover/
+            test_apps/p11ex_cli/_build/test/lib/*/test-*.xml
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: "test_apps/p11ex_cli/_build/test/lib/*/test-*.xml"
