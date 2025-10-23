@@ -65,17 +65,6 @@ jobs:
             -v ${{ github.event_path }}:/github/event.json \
             ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
             sh -c "cd /app && \
-              # Initialize base SoftHSM token for p11ex library tests
-              export SOFTHSM2_CONF=\$(mktemp) && \
-              export MAKE_TOKEN_DIR=yes && \
-              sh test/softhsm-reset.sh && \
-              # Navigate to CLI directory and setup CLI-specific token
-              cd test_apps/p11ex_cli && \
-              if [ ! -d 'token' ]; then \
-                echo '### CLI token directory does not exist, initializing' && \
-                mkdir -p token && \
-                . ./cli-softhsm-init.sh; \
-              fi && \
               # Set environment variables for CLI tests
               export TEST_P11EX_PIN=1234 && \
               export TEST_P11EX_MODULE=/usr/lib/softhsm/libsofthsm2.so && \
@@ -83,6 +72,13 @@ jobs:
               export SOFTHSM_PREFIX=/usr && \
               export P11TOOL_PREFIX=/usr && \
               export SOFTHSM2_CONF=cli-softhsm.conf && \
+              # Navigate to CLI directory and setup CLI-specific token
+              cd test_apps/p11ex_cli && \
+              if [ ! -d 'token' ]; then \
+                echo '### CLI token directory does not exist, initializing' && \
+                mkdir -p token && \
+                . ./cli-softhsm-init.sh; \
+              fi && \
               # Run CLI tests
               echo '### Running CLI tests with existing token' && \
               exec env MIX_ENV=test mix coveralls.html"
