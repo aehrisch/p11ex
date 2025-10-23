@@ -9,13 +9,6 @@ defmodule P11ex.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
-        coveralls: :test,
-        "coveralls.detail": :test,
-        "coveralls.post": :test,
-        "coveralls.html": :test,
-        "coveralls.github": :test
-      ],
       erlc_paths: ["src"],
       asn1_options: asn1_options(),
       compilers: [:asn1, :elixir_make] ++ Mix.compilers(),
@@ -29,6 +22,15 @@ defmodule P11ex.MixProject do
     ]
   end
 
+  def cli do
+    [preferred_cli_env: [
+      coveralls: :test,
+      "coveralls.detail": :test,
+      "coveralls.post": :test,
+      "coveralls.html": :test,
+      "coveralls.github": :test]]
+  end
+  
   defp asn1_options, do: [maps: true, der: true, jer: false, verbose: true]
 
   defp package do

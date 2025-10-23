@@ -1,6 +1,8 @@
 defmodule P11exCli.ObjectList do
   alias CliMate.CLI
 
+  defp exit, do: Application.fetch_env!(:p11ex_cli, :exit_mod)
+
   @command name: "p11ex list-objects",
     module: __MODULE__,
     options: P11exCli.Common.options() ++  P11exCli.Common.token_options() ++ P11exCli.Common.output_options(),
@@ -10,15 +12,22 @@ defmodule P11exCli.ObjectList do
         required: true,
         doc: "Object type to list (seck, prvk, pubk)"
       ],
-      
+
     ]
   def main(args) do
-    res = CLI.parse_or_halt!(args, @command)
+    res = case CLI.parse(args, @command) do
+      {:ok, res} ->
+        res
+      {:error, reason} ->
+        IO.puts("Error parsing arguments: #{inspect(reason)}")
+        exit().halt(:invalid_param)
+    end
+
     obj_class = check_object_type!(res.arguments.object_type)
     output_format = P11exCli.Common.check_output_format!(res.options)
 
-    module = P11exCli.Common.load_module(res.options)
-    slot = P11exCli.Common.find_slot_by_label!(module, res.options)
+    P11exCli.Common.load_module(res.options)
+    slot = P11exCli.Common.find_slot_by_label!(res.options)
     {:ok, session_pid} = P11exCli.Common.login!(slot, res.options)
 
     find_objects(session_pid, obj_class, output_format)
@@ -41,10 +50,10 @@ defmodule P11exCli.ObjectList do
             |> Enum.map(fn {object, {:ok, attribs, _rest}} -> {object, attribs} end)
         output_objects(objects_and_attribs, output_format)
         P11ex.Session.logout(session_pid)
-        System.halt(0)
+        exit().halt(:ok)
       {:error, reason, details} ->
         IO.puts("Error listing objects: #{inspect(reason)} #{inspect(details)}")
-        System.halt(1)
+        exit().halt(:error)
     end
   end
 
@@ -55,7 +64,7 @@ defmodule P11exCli.ObjectList do
       "pubk" -> :cko_public_key
       _ ->
         IO.puts("Invalid object type: #{object_type}")
-        System.halt(2)
+        exit().halt(:invalid_param)
     end
   end
 
