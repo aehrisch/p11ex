@@ -74,7 +74,7 @@ jobs:
               if [ ! -d 'token' ]; then \
                 echo '### CLI token directory does not exist, initializing' && \
                 mkdir -p token && \
-                source ./cli-softhsm-init.sh; \
+                . ./cli-softhsm-init.sh; \
               fi && \
               # Set environment variables for CLI tests
               export TEST_P11EX_PIN=1234 && \
