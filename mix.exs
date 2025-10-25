@@ -41,7 +41,8 @@ defmodule P11ex.MixProject do
       licenses: ["BSD-3-Clause"],
       links: %{
         "GitHub" => "https://github.com/aehrisch/p11ex",
-        "Documentation" => "https://hexdocs.pm/p11ex"
+        "Documentation" => "https://hexdocs.pm/p11ex",
+        "Changelog" => "https://hexdocs.pm/p11ex/changelog.html"
       }
     ]
   end
