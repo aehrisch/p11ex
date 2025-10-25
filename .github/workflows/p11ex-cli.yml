@@ -1,4 +1,4 @@
-name: p11ex_cli Build and Test
+name: p11ex_cli
 
 on:
   push:
