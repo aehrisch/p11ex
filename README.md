@@ -1,3 +1,4 @@
+[![SoftHSM Linux](https://github.com/aehrisch/p11ex/actions/workflows/softhsm-linux.yml/badge.svg)](https://github.com/aehrisch/p11ex/actions/workflows/softhsm-linux.yml)[![SoftHSM macOS](https://github.com/aehrisch/p11ex/actions/workflows/softhsm-macos.yml/badge.svg)](https://github.com/aehrisch/p11ex/actions/workflows/softhsm-macos.yml)[![p11ex_cli](https://github.com/aehrisch/p11ex/actions/workflows/p11ex-cli.yml/badge.svg)](https://github.com/aehrisch/p11ex/actions/workflows/p11ex-cli.yml)
 <div align="right">
   <img src="img/p11ex-logo-400x400.png" alt="p11ex logo" width="100">
 </div>
