@@ -13,6 +13,7 @@ The `p11ex_cli` is a command-line interface for interacting with PKCS#11 cryptog
   - [key-gen-aes](#key-gen-aes)
   - [key-wrap](#key-wrap)
   - [key-unwrap](#key-unwrap)
+  - [kcv-gen](#kcv-gen)
   - [help](#help)
 - [Usage Examples](#usage-examples)
 - [Environment Variables](#environment-variables)
@@ -369,6 +370,81 @@ Object handle: 1a2b3c4d5e6f7890
 - Key attributes (encrypt, decrypt, sign, etc.) can be set during unwrap
 - The unwrapped key is a completely new key object with a new handle
 
+### kcv-gen
+
+Generates a Key Check Value (KCV) for one or more secret keys. The KCV is computed by encrypting a block of zeros using AES-ECB mode with the key and taking the first 3 bytes of the result. This provides a quick fingerprint for verifying key integrity.
+
+**Usage:**
+```bash
+p11ex kcv-gen [OPTIONS] <key_ref...>
+```
+
+**Arguments:**
+- `key_ref` (required, repeatable): Reference(s) to the key(s)
+  - Format: `label:name`, `id:hexstring`, or `handle:number`
+  - The key must be a secret key (`CKO_SECRET_KEY`)
+  - The key must have `CKA_ENCRYPT` capability set to true
+  - Multiple keys can be specified for batch processing
+
+**Options:**
+- All global and token authentication options
+- `--output-format` / `-f`: Output format (json, text)
+
+**Example Usage:**
+```bash
+# Generate KCV for a single key by label
+p11ex kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  label:MyAESKey
+
+# Generate KCVs for multiple keys
+p11ex kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  label:MyAESKey label:AnotherKey id:48656c6c6f
+
+# Generate KCV with JSON output
+p11ex kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  -f json label:MyAESKey
+```
+
+**Example Output (text format):**
+```
+Key reference: label:MyAESKey
+  Handle: 1234567890
+  KCV: 0x48656c
+
+Key reference: label:AnotherKey
+  Handle: 9876543210
+  KCV: 0xa3f2c8
+```
+
+**Example Output (JSON format):**
+```json
+[
+  {
+    "ref": "label:MyAESKey",
+    "result": {
+      "handle": 1234567890,
+      "status": "ok",
+      "kcv": "0x48656c"
+    }
+  },
+  {
+    "ref": "label:AnotherKey",
+    "result": {
+      "handle": 9876543210,
+      "status": "ok",
+      "kcv": "0xa3f2c8"
+    }
+  }
+]
+```
+
+**Notes:**
+- The KCV algorithm uses AES-ECB mode to encrypt a zero-filled block and takes the first 3 bytes
+- KCVs provide a quick way to verify that a key was correctly loaded or transferred
+- Only secret keys can be used for KCV generation
+- The key must have encryption capability enabled
+- Error status will be shown in the output if key lookup or encryption fails
+
 ### help
 
 Shows help information for commands.
@@ -479,6 +555,30 @@ p11ex key-unwrap -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   ckm_aes_key_wrap_pad \
   label:MyWrappingKey \
   exported_key.hex
+```
+
+### Key Check Value (KCV) Workflow
+
+This example demonstrates how to generate KCVs to verify key integrity:
+
+```bash
+# Step 1: Generate a key for testing
+p11ex key-gen-aes -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  --encrypt --decrypt \
+  "MyTestKey" 256
+
+# Step 2: Generate the KCV for verification
+# Save the KCV to a file for later comparison
+p11ex kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  label:MyTestKey > kcv.txt
+
+# Step 3: Generate KCVs for multiple keys at once
+p11ex kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  label:MyTestKey label:AnotherKey label:ThirdKey
+
+# Step 4: Use JSON output to programmatically verify keys
+p11ex kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  -f json label:MyTestKey | jq '.[] | select(.result.status == "ok")'
 ```
 
 ## Environment Variables
