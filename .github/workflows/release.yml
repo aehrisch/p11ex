@@ -2,6 +2,12 @@ name: Release to Hex.pm
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (build and calculate version, but do not release)'
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   calculate-version:
@@ -259,10 +265,33 @@ jobs:
             priv/
             test_apps/p11ex_cli/p11ex_cli
 
+  dry-run-summary:
+    runs-on: ubuntu-latest
+    needs: [calculate-version, build-linux-amd64, build-linux-arm64, build-macos-arm64]
+    if: needs.calculate-version.result == 'success' && needs.calculate-version.outputs.no_release != 'true' && inputs.dry_run == 'true'
+    steps:
+      - name: Dry Run Summary
+        run: |
+          echo "## 🔍 Dry Run Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Calculated Version:** \`${{ needs.calculate-version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Status:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Linux AMD64: ✅ Built successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- Linux ARM64: ✅ Built successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS ARM64: ✅ Built successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the calculated version above" >> $GITHUB_STEP_SUMMARY
+          echo "2. Make any necessary adjustments to CHANGELOG.md or other files" >> $GITHUB_STEP_SUMMARY
+          echo "3. Run the workflow again with \`dry_run\` set to \`false\` to perform the actual release" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** No git tags were created and no packages were published to Hex.pm." >> $GITHUB_STEP_SUMMARY
+
   release:
     runs-on: ubuntu-latest
     needs: [calculate-version, build-linux-amd64, build-linux-arm64, build-macos-arm64]
-    if: needs.calculate-version.result == 'success' && needs.calculate-version.outputs.no_release != 'true'
+    if: needs.calculate-version.result == 'success' && needs.calculate-version.outputs.no_release != 'true' && inputs.dry_run != 'true'
     permissions:
       contents: write
       packages: write
