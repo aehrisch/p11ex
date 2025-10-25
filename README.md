@@ -1,6 +1,8 @@
+<div align="right">
+  <img src="img/p11ex-logo-400x400.png" alt="p11ex logo" width="100">
+</div>
 
 # p11ex --- PKCS#11 bindings for Elixir
-
 `p11ex` is an Elixir library that provides access to the [PKCS#11 interface](https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html) for cryptographic tokens such as Hardware Security Modules and smartcards. The library exposes most PKCS#11 functionality to Elixir, though it is not yet feature complete. Available functions include:
 
 - `C_GetSlotList`: List tokens
