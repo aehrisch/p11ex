@@ -8,7 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial PKCS#11 interface for Elixir
-- Support for SoftHSM2 for testing
-- NIF implementation for PKCS#11 operations
-- Comprehensive test suite 
+
+- Add `key-wrap` and `key-unwrap` commands to `p11ex_cli`.
+- Add `kcv-gen` command to `p11ex_cli` to compute the fingerprint of secret keys .
