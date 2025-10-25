@@ -29,7 +29,7 @@
 
 Some PKCS#11 functions require mechanism parameters as arguments. Common parameter types are supported and documented in the Elixir documentation.
 
-The implementation is automatically tested with [SoftHSM](https://github.com/softhsm/softHSMv2). Additional tests are available for the [Yubikey PKCS#11 module](https://developers.yubico.com/yubico-piv-tool/YKCS11/), though these do not run automatically as part of the build.
+The implementation is automatically tested with [SoftHSM](https://github.com/softhsm/softHSMv2) on Linux (AMD64 and ARM64) and macOS (ARM64). Additional tests are available for the [Yubikey PKCS#11 module](https://developers.yubico.com/yubico-piv-tool/YKCS11/), though these do not run automatically as part of the build.
 
 ## p11ex_cli --- CLI program to use PKCS#11 tokens
 
