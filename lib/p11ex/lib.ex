@@ -369,6 +369,8 @@ defmodule P11ex.Lib do
         case :erlang.load_nif(:filename.join(priv_dir, "p11ex_nif"), 0) do
           :ok ->
             Logger.debug("NIF loaded successfully")
+          {:error, {:reload, _}} ->
+            Logger.debug("NIF already loaded (reload attempted)")
           {:error, {:load_failed, _}} ->
             Logger.warning("NIF already loaded or failed to load")
           {:error, {:bad_lib, _}} ->

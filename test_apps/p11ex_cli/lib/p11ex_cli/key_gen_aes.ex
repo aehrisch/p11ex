@@ -1,6 +1,8 @@
 defmodule P11exCli.KeyGenAes do
   alias CliMate.CLI
 
+  defp exit, do: Application.fetch_env!(:p11ex_cli, :exit_mod)
+
   @command name: "p11ex key-gen-aes",
     module: __MODULE__,
     options: P11exCli.Common.options() ++ P11exCli.Common.token_options() ++ [
@@ -72,9 +74,15 @@ defmodule P11exCli.KeyGenAes do
     ]
 
     def main(args) do
-      res = CLI.parse_or_halt!(args, @command)
-      module = P11exCli.Common.load_module(res.options)
-      slot = P11exCli.Common.find_slot_by_label!(module, res.options)
+      res = case CLI.parse(args, @command) do
+        {:ok, res} ->
+          res
+        {:error, reason} ->
+          IO.puts("Error parsing arguments: #{inspect(reason)}")
+          exit().halt(:invalid_param)
+      end
+      P11exCli.Common.load_module(res.options)
+      slot = P11exCli.Common.find_slot_by_label!(res.options)
       {:ok, session_pid} = P11exCli.Common.login!(slot, res.options)
 
       attribs = [
@@ -103,7 +111,7 @@ defmodule P11exCli.KeyGenAes do
       end
 
       P11ex.Session.logout(session_pid)
-      System.halt(0)
+      exit().halt(:ok)
     end
 
     def make_keyid(options) do
@@ -124,7 +132,7 @@ defmodule P11exCli.KeyGenAes do
     def check_aes_key_length!(key_length) do
       if key_length not in [128, 192, 256] do
         IO.puts("Invalid key length: #{key_length} must be 128, 192, or 256")
-        System.halt(1)
+        exit().halt(:error)
       end
       div(key_length, 8)
     end

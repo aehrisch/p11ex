@@ -20,6 +20,7 @@ softhsm-conf.path
 test_apps/*/_build
 test_apps/*/deps
 test_apps/*/bin
+test_apps/*/cover
 test_apps/p11ex_cli/p11ex_cli
 src/*.erl
 src/*.asn1db

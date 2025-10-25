@@ -1,9 +1,15 @@
 %{
   "asn1_compiler": {:hex, :asn1_compiler, "0.1.1", "64a4e52b59d1f225878445ace2c75cd2245b13a5a81182304fd9dc5acfc8994e", [:mix], [], "hexpm", "c250d24c22f1a3f305d88864400f9ac2df55c6886e1e3a030e2946efeb94695e"},
-  "cli_mate": {:hex, :cli_mate, "0.8.1", "376fdc710b9d8936205d4a7d0da98ea76d99f7390ec035242591798c14584e6c", [:mix], [], "hexpm", "553cebbecd823936588854fe185f31ac39d96d66f5db7ddcb107e40a6da0adfe"},
+  "cli_mate": {:hex, :cli_mate, "0.8.4", "59f0b36c56e2fa5345e6499e6f4b4395ecf96d562e29475bf7855dd6002ea6e3", [:mix], [], "hexpm", "fb4af2acd14a939d6bf519941cea0cf381c86251ed4bfd6c771bf40613edb2a2"},
   "elixir_make": {:hex, :elixir_make, "0.9.0", "6484b3cd8c0cee58f09f05ecaf1a140a8c97670671a6a0e7ab4dc326c3109726", [:mix], [], "hexpm", "db23d4fd8b757462ad02f8aa73431a426fe6671c80b200d9710caf3d1dd0ffdb"},
   "ex_cli": {:hex, :ex_cli, "0.1.6", "30f97ef0751c75863c669cf34ebb689a5a3ebf9dafd2e73739f173fbd7561a53", [:mix], [], "hexpm", "9b6e4e89f457f6805ae47a0fc0004bae804d894c85976dfd5b47330737dccf7b"},
+  "excoveralls": {:hex, :excoveralls, "0.18.5", "e229d0a65982613332ec30f07940038fe451a2e5b29bce2a5022165f0c9b157e", [:mix], [{:castore, "~> 1.0", [hex: :castore, repo: "hexpm", optional: true]}, {:jason, "~> 1.0", [hex: :jason, repo: "hexpm", optional: false]}], "hexpm", "523fe8a15603f86d64852aab2abe8ddbd78e68579c8525ae765facc5eae01562"},
   "jason": {:hex, :jason, "1.4.4", "b9226785a9aa77b6857ca22832cffa5d5011a667207eb2a0ad56adb5db443b8a", [:mix], [{:decimal, "~> 1.0 or ~> 2.0", [hex: :decimal, repo: "hexpm", optional: true]}], "hexpm", "c5eb0cab91f094599f94d55bc63409236a8ec69a21a67814529e8d5f6cc90b3b"},
+  "jsonpath_ex": {:hex, :jsonpath_ex, "0.1.0", "d18618499917d8419ea841aa0dcecef51557a9593ccc7418e6a403b25ec8d056", [:mix], [{:nimble_parsec, "~> 1.0", [hex: :nimble_parsec, repo: "hexpm", optional: false]}], "hexpm", "707edd50a6790cb7e87302b2d2092751a7744d8592f4b59a75fc9b594ad2f420"},
+  "junit_formatter": {:hex, :junit_formatter, "3.4.0", "d0e8db6c34dab6d3c4154c3b46b21540db1109ae709d6cf99ba7e7a2ce4b1ac2", [:mix], [], "hexpm", "bb36e2ae83f1ced6ab931c4ce51dd3dbef1ef61bb4932412e173b0cfa259dacd"},
+  "mox": {:hex, :mox, "1.2.0", "a2cd96b4b80a3883e3100a221e8adc1b98e4c3a332a8fc434c39526babafd5b3", [:mix], [{:nimble_ownership, "~> 1.0", [hex: :nimble_ownership, repo: "hexpm", optional: false]}], "hexpm", "c7b92b3cc69ee24a7eeeaf944cd7be22013c52fcb580c1f33f50845ec821089a"},
+  "nimble_ownership": {:hex, :nimble_ownership, "1.0.1", "f69fae0cdd451b1614364013544e66e4f5d25f36a2056a9698b793305c5aa3a6", [:mix], [], "hexpm", "3825e461025464f519f3f3e4a1f9b68c47dc151369611629ad08b636b73bb22d"},
+  "nimble_parsec": {:hex, :nimble_parsec, "1.4.2", "8efba0122db06df95bfaa78f791344a89352ba04baedd3849593bfce4d0dc1c6", [:mix], [], "hexpm", "4b21398942dda052b403bbe1da991ccd03a053668d147d53fb8c4e0efe09c973"},
   "optimus": {:hex, :optimus, "0.5.1", "cfa45641901f63ead47f7ed1f22d7c9c2e74bf9e32756beef3ac5334fe0b01ff", [:mix], [], "hexpm", "95c669e25e05e7f2a47bc1ff25ac237a19505f56135e9bfe88bc63ddbe60c07a"},
   "poolboy": {:hex, :poolboy, "1.5.2", "392b007a1693a64540cead79830443abf5762f5d30cf50bc95cb2c1aaafa006b", [:rebar3], [], "hexpm", "dad79704ce5440f3d5a3681c8590b9dc25d1a561e8f5a9c995281012860901e3"},
 }

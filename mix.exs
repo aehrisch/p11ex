@@ -9,13 +9,6 @@ defmodule P11ex.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
-        coveralls: :test,
-        "coveralls.detail": :test,
-        "coveralls.post": :test,
-        "coveralls.html": :test,
-        "coveralls.github": :test
-      ],
       erlc_paths: ["src"],
       asn1_options: asn1_options(),
       compilers: [:asn1, :elixir_make] ++ Mix.compilers(),
@@ -29,17 +22,27 @@ defmodule P11ex.MixProject do
     ]
   end
 
+  def cli do
+    [preferred_cli_env: [
+      coveralls: :test,
+      "coveralls.detail": :test,
+      "coveralls.post": :test,
+      "coveralls.html": :test,
+      "coveralls.github": :test]]
+  end
+
   defp asn1_options, do: [maps: true, der: true, jer: false, verbose: true]
 
   defp package do
     [
       name: "p11ex",
       files: ~w(lib src mix.exs README.md LICENSE),
-      maintainers: ["aehrisch"],
+      maintainers: ["Eric Knauel"],
       licenses: ["BSD-3-Clause"],
       links: %{
         "GitHub" => "https://github.com/aehrisch/p11ex",
-        "Documentation" => "https://hexdocs.pm/p11ex"
+        "Documentation" => "https://hexdocs.pm/p11ex",
+        "Changelog" => "https://hexdocs.pm/p11ex/changelog.html"
       }
     ]
   end

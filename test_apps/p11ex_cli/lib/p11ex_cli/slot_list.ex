@@ -1,6 +1,10 @@
 defmodule P11exCli.SlotList do
   alias CliMate.CLI
 
+  require Logger
+
+  defp exit, do: Application.fetch_env!(:p11ex_cli, :exit_mod)
+
   @command name: "p11ex list-slots",
     module: __MODULE__,
     options: P11exCli.Common.options() ++ [
@@ -12,10 +16,19 @@ defmodule P11exCli.SlotList do
       ]
     ],
     arguments: []
-    
+
   def main(args) do
-    res = CLI.parse_or_halt!(args, @command)
-    module = P11exCli.Common.load_module(res.options)
+    Logger.debug("list-slots: args=#{inspect(args)}")
+    res = case CLI.parse(args, @command) do
+      {:ok, res} ->
+        res
+      {:error, reason} ->
+        Logger.error("Error parsing arguments: #{inspect(reason)}")
+        IO.puts("Error parsing arguments: #{inspect(reason)}")
+        exit().halt(:invalid_param)
+    end
+    Logger.debug("list-slots: parsed args=#{inspect(res)}")
+    P11exCli.Common.load_module(res.options)
 
     case P11ex.Module.list_slots(res.options.with_token) do
       {:ok, slots} ->
