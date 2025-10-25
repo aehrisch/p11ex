@@ -41,6 +41,7 @@ defmodule P11exCli.MixProject do
       {:cli_mate, "== 0.8.4"},
       {:jason, "~> 1.4"},
 
+      {:junit_formatter, "~> 3.3", only: :test},
       {:excoveralls, "~> 0.18", only: :test},
       {:jsonpath_ex, "~> 0.1.0", only: :test}
     ]

@@ -48,4 +48,5 @@ defmodule P11exCli.TestHelper do
 
 end
 
+ExUnit.configure(formatters: [JUnitFormatter, ExUnit.CLIFormatter])
 ExUnit.start()
