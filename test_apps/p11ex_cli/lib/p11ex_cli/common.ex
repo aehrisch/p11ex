@@ -212,7 +212,7 @@ defmodule P11exCli.Common do
         case Base.decode16(String.slice(ref_str, 3..-1//1), case: :mixed) do
           {:ok, id_bin} ->
             {:cka_id, id_bin}
-          {:error, _} ->
+          :error ->
             {:error, "Invalid ID format"}
         end
 
@@ -336,14 +336,14 @@ defmodule P11exCli.Common do
           :hex ->
             case Base.decode16(String.trim(data), case: :mixed) do
               {:ok, bytes} -> bytes
-              {:error, _} ->
+              :error ->
                 IO.puts("Error: Invalid hex format in input file")
                 exit().halt(:invalid_param)
             end
           :base64 ->
             case Base.decode64(String.trim(data)) do
               {:ok, bytes} -> bytes
-              {:error, _} ->
+              :error ->
                 IO.puts("Error: Invalid base64 format in input file")
                 exit().halt(:invalid_param)
             end
