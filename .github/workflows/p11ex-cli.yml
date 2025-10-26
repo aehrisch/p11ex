@@ -100,3 +100,4 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           files: "test_apps/p11ex_cli/_build/test/lib/*/test-*.xml"
+          check_name: "Test Results (CLI)"

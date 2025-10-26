@@ -70,6 +70,7 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           files: "_build/test/lib/*/test-*.xml"
+          check_name: "Test Results (linux-amd64)"
 
   test-linux-arm64:
     runs-on: [self-hosted, Linux, ARM64]
@@ -138,6 +139,7 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           files: "_build/test/lib/*/test-*.xml"
+          check_name: "Test Results (linux-arm64)"
 
       - name: Cleanup temporary files
         if: always()
