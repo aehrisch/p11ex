@@ -1,6 +1,10 @@
 defmodule P11exCli.ObjectList do
   alias CliMate.CLI
 
+  alias P11ex.Lib.ObjectAttributes, as: OA
+
+  import P11exCli.Common, only: [carefully_read_object: 3]
+
   defp exit, do: Application.fetch_env!(:p11ex_cli, :exit_mod)
 
   @command name: "p11ex list-objects",
@@ -45,10 +49,20 @@ defmodule P11exCli.ObjectList do
       {:ok, objects} ->
         objects_and_attribs =
           objects
-            |> Enum.map(fn object -> {object, P11ex.Session.read_object(session_pid, object, obj_class)} end)
-            |> Enum.filter(fn {_, {:ok, _, _}} -> true end)
-            |> Enum.map(fn {object, {:ok, attribs, _rest}} -> {object, attribs} end)
+            |> Enum.map(fn object -> {object, carefully_read_object(session_pid, object, OA.public_key())} end)
+            |> Enum.map(fn {object, attrib_res} ->
+              ok_attribs = attrib_res
+                |> Enum.reduce(Map.new(), fn a, acc ->
+                  case a do
+                    {:ok, attrib} -> Map.merge(acc, attrib)
+                    _ -> acc
+                  end
+                end)
+              {object, ok_attribs}
+            end)
+
         output_objects(objects_and_attribs, output_format)
+
         P11ex.Session.logout(session_pid)
         exit().halt(:ok)
       {:error, reason, details} ->

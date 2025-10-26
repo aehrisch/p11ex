@@ -348,4 +348,25 @@ defmodule P11exCli.Common do
     end
   end
 
+  @doc """
+  Read the attributes of the object identified by object handle `object` one by one.
+  For some token this is necessary because its unclear which attributes (or attribute
+  types) are supported.
+  """
+  def carefully_read_object(session_pid, object, attributes) do
+    attributes
+    |> Enum.map(fn attribute ->
+      case P11ex.Session.read_object(session_pid, object, MapSet.new([attribute])) do
+        {:ok, attribs, _failed} -> {:ok, attribs}
+        {:error, reason} -> {:error, reason}
+      end
+    end)
+    |> Enum.filter(fn x ->
+      case x do
+        {:ok, _, _} -> false
+        _ -> true
+      end
+    end)
+  end
+
 end
