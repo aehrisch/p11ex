@@ -90,8 +90,6 @@ defmodule P11ex.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:poolboy, "~> 1.5.2"},
-
       {:elixir_make, "~> 0.7", runtime: false},
       {:asn1_compiler, "~> 0.1", runtime: false},
 
