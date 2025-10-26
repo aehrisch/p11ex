@@ -134,7 +134,7 @@ defmodule P11exCli.Common do
   end
 
   def find_slot_by_label!(options) do
-    label = Map.get(options, :token_label)
+    label = Map.get(options, :token_label) || System.get_env("P11EX_TOKEN_LABEL")
     case label do
       nil ->
         IO.puts("No token label specified")
