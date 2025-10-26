@@ -45,7 +45,7 @@ defmodule P11exCli.BenchAesEncryptBlock do
     key = P11exCli.Common.find_key_by_ref!(initial_session_pid, res.arguments.key_ref, :cko_secret_key)
 
     # Get configuration
-    config =Application.fetch_env!(:p11ex_cli, :benchmark)
+    config = Application.fetch_env!(:p11ex_cli, :benchmark)
     block_sizes = Keyword.get(config, :block_sizes)
 
     # Use --rounds option if provided, otherwise use config default
