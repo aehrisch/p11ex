@@ -62,8 +62,7 @@ defmodule P11ex.MixProject do
         "Core Modules": [
           P11ex,
           P11ex.Module,
-          P11ex.Session,
-          P11ex.SessionPoolSupervisor
+          P11ex.Session
         ],
         "Data Structures": [
           P11ex.Lib,
