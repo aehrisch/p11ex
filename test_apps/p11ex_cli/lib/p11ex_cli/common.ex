@@ -134,14 +134,20 @@ defmodule P11exCli.Common do
   end
 
   def find_slot_by_label!(options) do
-    label = Map.get(options, :token_label)
+    label = Map.get(options, :token_label) || System.get_env("P11EX_TOKEN_LABEL")
     case label do
       nil ->
         IO.puts("No token label specified")
         exit().halt(:invalid_param)
       _ ->
         case P11ex.Module.find_slot_by_tokenlabel(label) do
-          {:ok, slot} ->
+          {:ok, nil} ->
+            IO.puts("No slot found with token label: #{label}")
+            exit().halt(:error)
+          {:ok, %P11ex.Lib.Slot{} = slot} ->
+            if Map.get(options, :verbose, false) do
+              IO.puts("Found slot by label: #{slot.description}")
+            end
             slot
           {:error, reason} ->
             IO.puts("Error finding slot by label: #{inspect(reason)}")
@@ -150,7 +156,7 @@ defmodule P11exCli.Common do
     end
   end
 
-  def login!(slot, options) do
+  def login!(slot = %P11ex.Lib.Slot{}, options) do
     pin = get_pin!(options)
 
     # Workaround: If the module was previously logged out, login_type might be nil
@@ -206,7 +212,7 @@ defmodule P11exCli.Common do
         case Base.decode16(String.slice(ref_str, 3..-1//1), case: :mixed) do
           {:ok, id_bin} ->
             {:cka_id, id_bin}
-          {:error, _} ->
+          :error ->
             {:error, "Invalid ID format"}
         end
 
@@ -330,14 +336,14 @@ defmodule P11exCli.Common do
           :hex ->
             case Base.decode16(String.trim(data), case: :mixed) do
               {:ok, bytes} -> bytes
-              {:error, _} ->
+              :error ->
                 IO.puts("Error: Invalid hex format in input file")
                 exit().halt(:invalid_param)
             end
           :base64 ->
             case Base.decode64(String.trim(data)) do
               {:ok, bytes} -> bytes
-              {:error, _} ->
+              :error ->
                 IO.puts("Error: Invalid base64 format in input file")
                 exit().halt(:invalid_param)
             end
@@ -346,6 +352,27 @@ defmodule P11exCli.Common do
         IO.puts("Error reading wrapped key from file: #{inspect(reason)}")
         exit().halt(:error)
     end
+  end
+
+  @doc """
+  Read the attributes of the object identified by object handle `object` one by one.
+  For some token this is necessary because its unclear which attributes (or attribute
+  types) are supported.
+  """
+  def carefully_read_object(session_pid, object, attributes) do
+    attributes
+    |> Enum.map(fn attribute ->
+      case P11ex.Session.read_object(session_pid, object, MapSet.new([attribute])) do
+        {:ok, attribs, _failed} -> {:ok, attribs}
+        {:error, reason} -> {:error, reason}
+      end
+    end)
+    |> Enum.filter(fn x ->
+      case x do
+        {:ok, _, _} -> false
+        _ -> true
+      end
+    end)
   end
 
 end

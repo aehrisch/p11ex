@@ -14,6 +14,7 @@ The `p11ex_cli` is a command-line interface for interacting with PKCS#11 cryptog
   - [key-wrap](#key-wrap)
   - [key-unwrap](#key-unwrap)
   - [kcv-gen](#kcv-gen)
+  - [bench-aes-encrypt-block](#bench-aes-encrypt-block)
   - [help](#help)
 - [Usage Examples](#usage-examples)
 - [Environment Variables](#environment-variables)
@@ -445,6 +446,112 @@ Key reference: label:AnotherKey
 - The key must have encryption capability enabled
 - Error status will be shown in the output if key lookup or encryption fails
 
+### bench-aes-encrypt-block
+
+Benchmarks AES-CBC encryption performance across various block sizes using parallel sessions. This command is useful for performance testing and capacity planning of PKCS#11 tokens and HSMs.
+
+**Usage:**
+```bash
+p11ex bench-aes-encrypt-block [OPTIONS] <key_ref>
+```
+
+**Arguments:**
+- `key_ref` (required): Reference to the secret key to use for encryption
+  - Format: `label:name`, `id:hexstring`, or `handle:number`
+  - The key must be a secret key (`CKO_SECRET_KEY`)
+  - The key must have `CKA_ENCRYPT` capability set to true
+
+**Options:**
+- All global and token authentication options
+- `--number-sessions` (integer, default: 1): Number of parallel sessions to use for benchmarking
+- `--rounds` (integer): Number of encryption rounds per block size (overrides config default)
+
+**Configuration:**
+The benchmark uses configuration from `config.exs`:
+- `block_sizes`: List of block sizes to test (default: [32, 256, 1024, 8192, 65536, 262144] bytes)
+- `rounds_per_block`: Default number of rounds per block size (default: 10)
+
+**Example Usage:**
+```bash
+# Single session benchmark with default settings
+p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  label:MyAESKey
+
+# Multi-session benchmark with 4 parallel sessions
+p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  --number-sessions 4 \
+  label:MyAESKey
+
+# Custom number of rounds per block size
+p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  --rounds 20 \
+  label:MyAESKey
+```
+
+**Example Output:**
+```json
+{
+  "measurements": [
+    {
+      "block_size_bytes": 32,
+      "status": "success",
+      "average_duration_ms": 0.234,
+      "rounds": 10
+    },
+    {
+      "block_size_bytes": 256,
+      "status": "success",
+      "average_duration_ms": 0.456,
+      "rounds": 10
+    },
+    {
+      "block_size_bytes": 1024,
+      "status": "success",
+      "average_duration_ms": 1.234,
+      "rounds": 10
+    },
+    {
+      "block_size_bytes": 8192,
+      "status": "success",
+      "average_duration_ms": 8.765,
+      "rounds": 10
+    },
+    {
+      "block_size_bytes": 65536,
+      "status": "success",
+      "average_duration_ms": 65.432,
+      "rounds": 10
+    },
+    {
+      "block_size_bytes": 262144,
+      "status": "success",
+      "average_duration_ms": 254.321,
+      "rounds": 10
+    }
+  ],
+  "config": {
+    "key_ref": "label:MyAESKey",
+    "number_sessions": 1,
+    "iv": "0x48656c6c6f576f726c6431323456",
+    "block_sizes": [32, 256, 1024, 8192, 65536, 262144],
+    "rounds_per_block": 10
+  }
+}
+```
+
+**Notes:**
+- The benchmark uses AES-CBC mode with a random IV generated at the start and reused for all measurements
+- Each block size is encrypted multiple times (based on `rounds` or configuration), and the average duration is reported
+- Parallel execution distributes the encryption workload across multiple sessions for better throughput testing
+- Measurements include timing information in milliseconds for each block size
+- If some measurements fail, the status will be "partial" or "error" with error details included
+- The IV used for all encryptions is included in the output for reference
+- This command is useful for:
+  - Performance testing of PKCS#11 tokens
+  - Capacity planning and throughput estimation
+  - Comparing encryption performance across different HSMs
+  - Stress testing with multiple parallel sessions
+
 ### help
 
 Shows help information for commands.
@@ -579,6 +686,38 @@ p11ex kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
 # Step 4: Use JSON output to programmatically verify keys
 p11ex kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   -f json label:MyTestKey | jq '.[] | select(.result.status == "ok")'
+```
+
+### Performance Benchmarking Workflow
+
+This example demonstrates how to benchmark AES encryption performance:
+
+```bash
+# Step 1: Generate a key for benchmarking
+p11ex key-gen-aes -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  --encrypt --decrypt \
+  "BenchKey" 256
+
+# Step 2: Run single-session benchmark
+# This measures encryption performance with sequential operations
+p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  label:BenchKey
+
+# Step 3: Run parallel benchmark with 4 sessions
+# This measures throughput with concurrent encryption operations
+p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  --number-sessions 4 \
+  label:BenchKey
+
+# Step 4: Run extended benchmark with more rounds for better statistics
+p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  --rounds 50 \
+  label:BenchKey
+
+# Step 5: Process results programmatically
+# Extract and analyze performance metrics
+p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  label:BenchKey | jq '.measurements[] | {size: .block_size_bytes, duration_ms: .average_duration_ms}'
 ```
 
 ## Environment Variables

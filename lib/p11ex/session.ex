@@ -26,6 +26,43 @@ defmodule P11ex.Session do
   {:ok, session} = P11ex.Session.start_link(module: module, slot_id: slot.slot_id, flags: [:rw_session])
   :ok = P11ex.Session.login(session, :user, "1234")
   ```
+
+  ## Session Pools
+
+  It is also possible to create a pool of sessions using the `:poolboy` library. This is useful if you want to
+  perform multiple operations in parallel. The pool is created using the `:poolboy.child_spec/3` function as
+  shown in the following example.
+
+  ```elixir
+  pool_options = [
+    name: {:local, :benchmark_pool},
+    worker_module: P11ex.Session,
+    size: size,
+    max_overflow: 0
+  ]
+
+  pool_args = [
+    module: P11ex.Module,
+    slot_id: slot.slot_id,
+    flags: [:rw_session]
+  ]
+
+  pool_spec = :poolboy.child_spec(:benchmark_pool, pool_options, pool_args)
+  {:ok, _pool_supervisor} = Supervisor.start_link([pool_spec], strategy: :one_for_one)
+  ```
+
+  Operations on the pool are performed using the `:poolboy.transaction/2` function as shown in the following example.
+
+  ```elixir
+  :poolboy.transaction(:benchmark_pool, fn session ->
+    P11ex.Session.encrypt(session, {:ckm_aes_gcm, %{iv: iv, tag_bits: 128}}, key, plaintext)
+  end)
+  ```
+
+  Please note that the number of session that can be opened in parallel might be limited by the token.
+  Also, sessions are usually stateful. For example, keys can be generated as session keys (`:cka_token`
+  set to `false`) and will not be visible in other sessions. Also, be carefull when using object handles
+  as these might also be invalid in other sessions.
   """
 
   use GenServer

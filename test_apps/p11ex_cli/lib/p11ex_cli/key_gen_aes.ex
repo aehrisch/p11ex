@@ -106,8 +106,9 @@ defmodule P11exCli.KeyGenAes do
       case P11ex.Session.generate_key(session_pid, {:ckm_aes_key_gen},  attribs) do
         {:ok, key_handle} ->
           IO.puts("Key generated. Object handle: #{Integer.to_string(key_handle.handle, 16)}")
-        {:error, reason, details} ->
-          IO.puts("Error generating key: #{reason} #{inspect(details)}")
+        {:error, reason} ->
+          IO.puts("Error generating key: #{inspect(reason)}")
+          exit().halt(:error)
       end
 
       P11ex.Session.logout(session_pid)

@@ -40,6 +40,7 @@ defmodule P11exCli.MixProject do
       {:p11ex, path: "../.."},
       {:cli_mate, "== 0.8.4"},
       {:jason, "~> 1.4"},
+      {:poolboy, "~> 1.5.2"},
 
       {:junit_formatter, "~> 3.3", only: :test},
       {:excoveralls, "~> 0.18", only: :test},
