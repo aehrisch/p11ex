@@ -145,7 +145,9 @@ defmodule P11exCli.Common do
             IO.puts("No slot found with token label: #{label}")
             exit().halt(:error)
           {:ok, %P11ex.Lib.Slot{} = slot} ->
-            IO.puts("Found slot by label: #{slot.description}")
+            if Map.get(options, :verbose, false) do
+              IO.puts("Found slot by label: #{slot.description}")
+            end
             slot
           {:error, reason} ->
             IO.puts("Error finding slot by label: #{inspect(reason)}")
