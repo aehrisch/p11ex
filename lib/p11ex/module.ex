@@ -226,7 +226,7 @@ defmodule P11ex.Module do
                 {:error, reason} -> {:error, slot.slot_id, reason}
               end
             end)
-          |> Enum.find(nil, fn {:ok, token_info, _slot_id} -> token_info.label == label end)
+          |> Enum.find(nil, fn {:ok, token_info, _slot_id} -> String.trim(token_info.label) == String.trim(label) end)
         case matched_slot do
           nil ->
             Logger.info("no slot found with token label #{label}")
