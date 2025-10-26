@@ -141,7 +141,11 @@ defmodule P11exCli.Common do
         exit().halt(:invalid_param)
       _ ->
         case P11ex.Module.find_slot_by_tokenlabel(label) do
-          {:ok, slot} ->
+          {:ok, nil} ->
+            IO.puts("No slot found with token label: #{label}")
+            exit().halt(:error)
+          {:ok, %P11ex.Lib.Slot{} = slot} ->
+            IO.puts("Found slot by label: #{slot.description}")
             slot
           {:error, reason} ->
             IO.puts("Error finding slot by label: #{inspect(reason)}")
@@ -150,7 +154,7 @@ defmodule P11exCli.Common do
     end
   end
 
-  def login!(slot, options) do
+  def login!(slot = %P11ex.Lib.Slot{}, options) do
     pin = get_pin!(options)
 
     # Workaround: If the module was previously logged out, login_type might be nil
