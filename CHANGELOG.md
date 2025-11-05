@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - p11ex: Add function `P11ex.Session.session_handle/1` to get session handle for a `P11ex.Session` server.
 - p11ex_cli: Log error messages and warnings to stderr
+- p11ex_cli: add command `export-pubk` to export public keys
+- p11ex_cli: add command `sign` to sign data with a RSA or EC algorithms
 
 ## [0.3.1] - 2025-10-27
 

@@ -47,7 +47,7 @@ defmodule P11exCli.ObjectList do
 
     case P11ex.Session.find_objects(session_pid, attribs, 10) do
       {:ok, objects} ->
-        
+
         attribute_hint = case obj_class do
           :cko_secret_key -> OA.secret_key()
           :cko_private_key -> OA.private_key()
@@ -58,15 +58,8 @@ defmodule P11exCli.ObjectList do
         objects_and_attribs =
           objects
             |> Enum.map(fn object -> {object, carefully_read_object(session_pid, object, attribute_hint)} end)
-            |> Enum.map(fn {object, attrib_res} ->
-              ok_attribs = attrib_res
-                |> Enum.reduce(Map.new(), fn a, acc ->
-                  case a do
-                    {:ok, attrib} -> Map.merge(acc, attrib)
-                    _ -> acc
-                  end
-                end)
-              {object, ok_attribs}
+            |> Enum.map(fn {object, attribs} ->
+              {object, attribs}
             end)
 
         output_objects(objects_and_attribs, output_format)

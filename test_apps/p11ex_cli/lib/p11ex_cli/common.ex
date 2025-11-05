@@ -248,12 +248,10 @@ defmodule P11exCli.Common do
       {:error, msg} ->
         {:error, "Error parsing key reference: #{msg}"}
 
-      {:cka_handle, handle} ->
-        # For handle references, we don't need to search
-        %P11ex.Lib.ObjectHandle{
-          session: nil,  # Will be set by Session if needed
-          handle: handle
-        }
+      {:cka_handle, object_handle} ->
+        with {:ok, sh} <- P11ex.Session.session_handle(session_pid) do
+          {:ok, P11ex.Lib.ObjectHandle.new(sh, object_handle)}
+        end
 
       search_attrib ->
         # Search for the key
@@ -367,12 +365,13 @@ defmodule P11exCli.Common do
         {:error, reason} -> {:error, reason}
       end
     end)
-    |> Enum.filter(fn x ->
-      case x do
-        {:ok, _, _} -> false
-        _ -> true
-      end
-    end)
+    |> Enum.reduce(Map.new(),
+      fn r, acc ->
+        case r do
+          {:ok, a} -> Map.merge(acc, a)
+          _ -> acc
+        end
+      end)
   end
 
 end
