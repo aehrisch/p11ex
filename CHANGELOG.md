@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - p11ex: Add function `P11ex.Session.session_handle/1` to get session handle for a `P11ex.Session` server.
+- p11ex_cli: Log error messages and warnings to stderr
 
 ## [0.3.1] - 2025-10-27
 
