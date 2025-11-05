@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -ex
 
 rm -rfv token/*
 
@@ -25,6 +25,23 @@ ${P11TOOL_PREFIX}/bin/pkcs11-tool --module ${TEST_P11EX_MODULE} \
   --login --pin ${TEST_P11EX_PIN} --token ${TEST_P11EX_TOKEN_LABEL} \
   --keygen --label "aes_256" --id 12 \
   --key-type AES:32
+
+echo
+echo "### Generating signing keys"
+${P11TOOL_PREFIX}/bin/pkcs11-tool --module ${TEST_P11EX_MODULE} \
+  --login --pin ${TEST_P11EX_PIN} --token ${TEST_P11EX_TOKEN_LABEL} \
+  --keypairgen --label "rsa_3072" --id 30 \
+  --key-type RSA:3072
+
+${P11TOOL_PREFIX}/bin/pkcs11-tool --module ${TEST_P11EX_MODULE} \
+  --login --pin ${TEST_P11EX_PIN} --token ${TEST_P11EX_TOKEN_LABEL} \
+  --keypairgen --label "rsa_4096" --id 31 \
+  --key-type RSA:4096
+
+${P11TOOL_PREFIX}/bin/pkcs11-tool --module ${TEST_P11EX_MODULE} \
+  --login --pin ${TEST_P11EX_PIN} --token ${TEST_P11EX_TOKEN_LABEL} \
+  --keypairgen --label "ecdsa_p256" --id 32 \
+  --key-type EC:secp256r1
 
 echo
 echo "### Wrapping keys"
