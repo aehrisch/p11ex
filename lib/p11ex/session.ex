@@ -125,6 +125,14 @@ defmodule P11ex.Session do
   end
 
   @doc """
+  Return the session handle as a `P11ex.Lib.SessionHandle.t()` object.
+  """
+  @spec session_handle(server :: GenServer.server()) :: {:ok, P11ex.Lib.SessionHandle.t()} | {:error, atom()}
+  def session_handle(server \\ __MODULE__) do
+    GenServer.call(server, :handle)
+  end
+
+  @doc """
   Log in to the session. The `user_type` must be either `:user` or `:so`. Provide the user's pin
   for authentication. The `P11ex.Session` module checks if the session is already logged in and
   skips the login if so, preventing `:cka_already_logged_in` errors.
@@ -558,6 +566,12 @@ defmodule P11ex.Session do
   def handle_call(:info, _from, state) do
     res = Lib.session_info(state.session)
     {:reply, res, state}
+  end
+
+  @impl true
+  def handle_call(:handle, _from, state) do
+    s = %P11ex.Lib.SessionHandle{module: state.module, handle: state.session.handle, slot_id: state.session.slot_id}
+    {:reply, {:ok, s}, state}
   end
 
   @impl true
