@@ -23,7 +23,7 @@ defmodule P11exCli.ObjectList do
       {:ok, res} ->
         res
       {:error, reason} ->
-        IO.puts("Error parsing arguments: #{inspect(reason)}")
+        IO.puts(:stderr, "Error parsing arguments: #{inspect(reason)}")
         exit().halt(:invalid_param)
     end
 
@@ -74,7 +74,7 @@ defmodule P11exCli.ObjectList do
         P11ex.Session.logout(session_pid)
         exit().halt(:ok)
       {:error, reason, details} ->
-        IO.puts("Error listing objects: #{inspect(reason)} #{inspect(details)}")
+        IO.puts(:stderr, "Error listing objects: #{inspect(reason)} #{inspect(details)}")
         exit().halt(:error)
     end
   end
@@ -85,7 +85,7 @@ defmodule P11exCli.ObjectList do
       "prvk" -> :cko_private_key
       "pubk" -> :cko_public_key
       _ ->
-        IO.puts("Invalid object type: #{object_type}")
+        IO.puts(:stderr, "Invalid object type: #{object_type}")
         exit().halt(:invalid_param)
     end
   end

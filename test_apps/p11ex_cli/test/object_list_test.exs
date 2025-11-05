@@ -51,7 +51,7 @@ defmodule P11exCli.ObjectListTest do
   describe "object-list wrong arguments" do
 
     test "wrong object type", context do
-      output = capture_io(fn ->
+      output = capture_io(:stderr, fn ->
         assert_raise RuntimeError, "halt-error", fn ->
           P11exCli.ObjectList.main(context.token_args ++ ["wrong"])
         end
