@@ -120,14 +120,14 @@ defmodule P11exCli.Common do
         {:ok, pin} ->
           pin
         {:error, reason} ->
-          IO.puts("Error reading PIN file: #{reason}")
+          IO.puts(:stderr, "Error reading PIN file: #{reason}")
           exit().halt(:invalid_param)
       end
     else
       if System.get_env("P11EX_PIN") do
         System.get_env("P11EX_PIN")
       else
-        IO.puts("No PIN specified, and P11EX_PIN is not set")
+        IO.puts(:stderr, "No PIN specified, and P11EX_PIN is not set")
         exit().halt(:invalid_param)
       end
     end
@@ -137,12 +137,12 @@ defmodule P11exCli.Common do
     label = Map.get(options, :token_label) || System.get_env("P11EX_TOKEN_LABEL")
     case label do
       nil ->
-        IO.puts("No token label specified")
+        IO.puts(:stderr, "No token label specified")
         exit().halt(:invalid_param)
       _ ->
         case P11ex.Module.find_slot_by_tokenlabel(label) do
           {:ok, nil} ->
-            IO.puts("No slot found with token label: #{label}")
+            IO.puts(:stderr, "No slot found with token label: #{label}")
             exit().halt(:error)
           {:ok, %P11ex.Lib.Slot{} = slot} ->
             if Map.get(options, :verbose, false) do
@@ -150,7 +150,7 @@ defmodule P11exCli.Common do
             end
             slot
           {:error, reason} ->
-            IO.puts("Error finding slot by label: #{inspect(reason)}")
+            IO.puts(:stderr, "Error finding slot by label: #{inspect(reason)}")
             exit().halt(:error)
         end
     end
@@ -170,7 +170,7 @@ defmodule P11exCli.Common do
       {:ok, session_pid}
     else
       {:error, reason} ->
-        IO.puts("Error logging in: #{inspect(reason)}")
+        IO.puts(:stderr, "Error logging in: #{inspect(reason)}")
         exit().halt(:error)
     end
   end
@@ -180,7 +180,7 @@ defmodule P11exCli.Common do
       "json" -> :json
       "text" -> :text
       _ ->
-        IO.puts("Invalid output format: #{inspect(options.output_format)}")
+        IO.puts(:stderr, "Invalid output format: #{inspect(options.output_format)}")
         exit().halt(:invalid_param)
     end
   end
@@ -238,7 +238,7 @@ defmodule P11exCli.Common do
       key
     else
       {:error, msg} ->
-        IO.puts(msg)
+        IO.puts(:stderr, msg)
         exit().halt(:invalid_param)
     end
   end
@@ -248,12 +248,10 @@ defmodule P11exCli.Common do
       {:error, msg} ->
         {:error, "Error parsing key reference: #{msg}"}
 
-      {:cka_handle, handle} ->
-        # For handle references, we don't need to search
-        %P11ex.Lib.ObjectHandle{
-          session: nil,  # Will be set by Session if needed
-          handle: handle
-        }
+      {:cka_handle, object_handle} ->
+        with {:ok, sh} <- P11ex.Session.session_handle(session_pid) do
+          {:ok, P11ex.Lib.ObjectHandle.new(sh, object_handle)}
+        end
 
       search_attrib ->
         # Search for the key
@@ -264,7 +262,7 @@ defmodule P11exCli.Common do
           {:ok, [key | _]} ->
             {:ok, key}
           {:ok, keys} when length(keys) > 1 ->
-            IO.puts("Warning: Multiple keys found with reference: #{ref_str}, using the first one")
+            IO.puts(:stderr, "Warning: Multiple keys found with reference: #{ref_str}, using the first one")
             {:ok, hd(keys)}
           {:error, reason} ->
             {:error, "Error finding key: #{inspect(reason)}"}
@@ -278,7 +276,7 @@ defmodule P11exCli.Common do
   def find_key_by_ref_any_class!(session_pid, ref_str, classes) do
     case attrib_for_ref(ref_str) do
       {:error, msg} ->
-        IO.puts("Error parsing key reference: #{msg}")
+        IO.puts(:stderr, "Error parsing key reference: #{msg}")
         exit().halt(:invalid_param)
 
       {:cka_handle, handle} ->
@@ -300,7 +298,7 @@ defmodule P11exCli.Common do
         case result do
           {:found, key} -> key
           nil ->
-            IO.puts("Key not found with reference: #{ref_str}")
+            IO.puts(:stderr, "Key not found with reference: #{ref_str}")
             exit().halt(:invalid_param)
         end
     end
@@ -319,7 +317,7 @@ defmodule P11exCli.Common do
     case File.write(file_path, data) do
       :ok -> :ok
       {:error, reason} ->
-        IO.puts("Error writing wrapped key to file: #{inspect(reason)}")
+        IO.puts(:stderr, "Error writing wrapped key to file: #{inspect(reason)}")
         exit().halt(:error)
     end
   end
@@ -337,19 +335,19 @@ defmodule P11exCli.Common do
             case Base.decode16(String.trim(data), case: :mixed) do
               {:ok, bytes} -> bytes
               :error ->
-                IO.puts("Error: Invalid hex format in input file")
+                IO.puts(:stderr, "Error: Invalid hex format in input file")
                 exit().halt(:invalid_param)
             end
           :base64 ->
             case Base.decode64(String.trim(data)) do
               {:ok, bytes} -> bytes
               :error ->
-                IO.puts("Error: Invalid base64 format in input file")
+                IO.puts(:stderr, "Error: Invalid base64 format in input file")
                 exit().halt(:invalid_param)
             end
         end
       {:error, reason} ->
-        IO.puts("Error reading wrapped key from file: #{inspect(reason)}")
+        IO.puts(:stderr, "Error reading wrapped key from file: #{inspect(reason)}")
         exit().halt(:error)
     end
   end
@@ -367,12 +365,13 @@ defmodule P11exCli.Common do
         {:error, reason} -> {:error, reason}
       end
     end)
-    |> Enum.filter(fn x ->
-      case x do
-        {:ok, _, _} -> false
-        _ -> true
-      end
-    end)
+    |> Enum.reduce(Map.new(),
+      fn r, acc ->
+        case r do
+          {:ok, a} -> Map.merge(acc, a)
+          _ -> acc
+        end
+      end)
   end
 
 end

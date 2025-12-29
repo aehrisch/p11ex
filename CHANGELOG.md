@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- p11ex: Add function `P11ex.Session.session_handle/1` to get session handle for a `P11ex.Session` server.
+- p11ex_cli: Log error messages and warnings to stderr
+- p11ex_cli: add command `export-pubk` to export public keys
+- p11ex_cli: add command `sign` to sign data with a RSA or EC algorithms
+
 ## [0.3.1] - 2025-10-27
 
 ### Added
