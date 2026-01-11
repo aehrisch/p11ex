@@ -17,13 +17,16 @@ defmodule P11exCli.RsaSignVerifyTest do
     File.write!(rsa_pubk_file, rsa_pem)
     Logger.debug("wrote rsa public key to #{rsa_pubk_file}")
 
+    test_files = TH.write_test_files()
+
     # Clean up the public key files and test files after tests are done
     on_exit(fn ->
       File.rm(rsa_pubk_file)
+      TH.cleanup_test_files()
     end)
 
     Map.merge(context, context1)
-    |> Map.merge(%{rsa_pubk_file: rsa_pubk_file})
+    |> Map.merge(%{rsa_pubk_file: rsa_pubk_file, test_files: test_files})
   end
 
   @doc """
@@ -41,27 +44,23 @@ defmodule P11exCli.RsaSignVerifyTest do
     end
   end
 
-  @pkcs15_input_sizes [16, 64, 1024, 1024*1024, 10*1024*1024, 100*1024*1024]
   @pkcs15_algs [
     {"rsa_pkcs_sha1", "-sha1"},
     {"rsa_pkcs_sha256", "-sha256"},
     {"rsa_pkcs_sha384", "-sha384"},
     {"rsa_pkcs_sha512", "-sha512"}
   ]
-  describe "RSA PKCS#1 v1.5 sign and verify" do
-    Enum.each(@pkcs15_input_sizes, fn size ->
+  describe "RSA PKCS#1 v1.5 sign and verify (no chunks)" do
+    Enum.each(TH.sizes(), fn size ->
       Enum.each(@pkcs15_algs, fn {p11_alg, openssl_digest_alg} ->
         test "#{p11_alg} size #{size} bytes", context do
 
-          data_file = Path.join(System.tmp_dir!(), "#{unquote(p11_alg)}_#{unquote(size)}.bin")
-          File.write!(data_file, :crypto.strong_rand_bytes(unquote(size)))
-
+          data_file = Enum.find_value(context.test_files, fn {s, f} -> if s == unquote(size), do: f end)
           sig_file = Path.join(System.tmp_dir!(), "sig_#{unquote(p11_alg)}_" <> to_string(unquote(size)) <> ".bin")
           P11exCli.Sign.main(context.token_args ++ [unquote(p11_alg), "label:rsa_4096", data_file, sig_file])
 
           on_exit(fn ->
             File.rm(sig_file)
-            File.rm(data_file)
           end)
 
           openssl_verify(:pkcs15, context.rsa_pubk_file, sig_file, data_file, unquote(openssl_digest_alg))

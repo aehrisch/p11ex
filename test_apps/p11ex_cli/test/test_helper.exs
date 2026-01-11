@@ -3,6 +3,12 @@ Code.require_file("support/halt_mock.ex", __DIR__)
 
 defmodule P11exCli.TestHelper do
 
+  @sizes [7, 16, 512, 729, 1024, 8192, 65536, 1024*1024, 10*1024*1024, 100*1024*1024]
+
+  def sizes do
+    @sizes
+  end
+
   def setup_all do
     Application.put_env(:p11ex_cli, :exit_mod, P11exCli.HaltMock)
 
@@ -44,6 +50,23 @@ defmodule P11exCli.TestHelper do
       end
     end)
     Path.expand(temp_file)
+  end
+
+  def write_test_files(sizes \\ @sizes) do
+    sizes
+    |> Enum.map(fn size ->
+      file = Path.join(System.tmp_dir!(), "test_input_#{size}.bin")
+      File.write!(file, :crypto.strong_rand_bytes(size))
+      {size, file}
+    end)
+    |> Map.new()
+  end
+
+  def cleanup_test_files(sizes \\ @sizes) do
+    sizes
+    |> Enum.each(fn size ->
+      File.rm(Path.join(System.tmp_dir!(), "test_input_#{size}.bin"))
+    end)
   end
 
 end
