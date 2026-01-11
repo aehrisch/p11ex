@@ -50,6 +50,7 @@ defmodule P11exCli.RsaSignVerifyTest do
     {"rsa_pkcs_sha384", "-sha384"},
     {"rsa_pkcs_sha512", "-sha512"}
   ]
+
   describe "RSA PKCS#1 v1.5 sign and verify (no chunks)" do
     Enum.each(TH.sizes(), fn size ->
       Enum.each(@pkcs15_algs, fn {p11_alg, openssl_digest_alg} ->
@@ -66,6 +67,30 @@ defmodule P11exCli.RsaSignVerifyTest do
           openssl_verify(:pkcs15, context.rsa_pubk_file, sig_file, data_file, unquote(openssl_digest_alg))
         end
       end)
+    end)
+  end
+
+  @chunks [1024, 8192, 65536, 1024*1024]
+
+  describe "RSA PKCS#1 v1.5 sign and verify (in chunks)" do
+    Enum.each(@chunks, fn chunk ->
+      Enum.each(TH.sizes(), fn size ->
+        Enum.each(@pkcs15_algs, fn {p11_alg, openssl_digest_alg} ->
+          test "#{p11_alg} size #{size} bytes, chunk #{chunk}", context do
+
+            data_file = Enum.find_value(context.test_files, fn {s, f} -> if s == unquote(size), do: f end)
+            sig_file = Path.join(System.tmp_dir!(), "sig_#{unquote(p11_alg)}_" <> to_string(unquote(size)) <> "_chunk_#{unquote(chunk)}.bin")
+            P11exCli.Sign.main(context.token_args ++ ["--chunks", to_string(unquote(chunk)), unquote(p11_alg), "label:rsa_4096", data_file, sig_file])
+
+            on_exit(fn ->
+              File.rm(sig_file)
+            end)
+
+            openssl_verify(:pkcs15, context.rsa_pubk_file, sig_file, data_file, unquote(openssl_digest_alg))
+          end
+        end)
+      end)
+
     end)
   end
 
