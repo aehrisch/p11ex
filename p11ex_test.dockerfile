@@ -61,6 +61,7 @@ ENV PKCS11SPY=/usr/lib/softhsm/libsofthsm2.so
 RUN asdf plugin add erlang && \
     asdf install erlang 27.3 && \
     asdf install erlang 28.3 && \
+    asdf install erlang 28.3.2 && \
     echo "erlang 27.3" >> $HOME/.tool-versions
 
 # Install Elixir
