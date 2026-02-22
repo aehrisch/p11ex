@@ -3,8 +3,7 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
-    && apt-get upgrade -y \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get upgrade -y
 
 RUN apt-get install -y \
     git \
@@ -15,8 +14,7 @@ RUN apt-get install -y \
     softhsm2 \
     locales \
     && locale-gen en_US.UTF-8 \
-    && update-locale LANG=en_US.UTF-8 \
-    && rm -rf /var/lib/apt/lists/*
+    && update-locale LANG=en_US.UTF-8
 
 ENV ASDF_VERSION=v0.18.0 \
     LANG=en_US.UTF-8 \
