@@ -75,6 +75,9 @@ jobs:
               export SOFTHSM_PREFIX=/usr && \
               export P11TOOL_PREFIX=/usr && \
               export SOFTHSM2_CONF=cli-softhsm.conf && \
+              echo 'elixir 1.19.5-otp-27' > .tool-versions && \
+              echo 'erlang 27.3' >> .tool-versions && \
+              asdf current && \
               # Navigate to CLI directory and setup CLI-specific token
               cd test_apps/p11ex_cli && \
               if [ ! -d 'token' ]; then \
@@ -173,6 +176,9 @@ jobs:
               export SOFTHSM_PREFIX=/usr && \
               export P11TOOL_PREFIX=/usr && \
               export SOFTHSM2_CONF=cli-softhsm.conf && \
+              echo 'elixir 1.19.5-otp-28' > .tool-versions && \
+              echo 'erlang 28.3' >> .tool-versions && \
+              asdf current && \
               # Navigate to CLI directory and setup CLI-specific token
               cd test_apps/p11ex_cli && \
               if [ ! -d 'token' ]; then \
