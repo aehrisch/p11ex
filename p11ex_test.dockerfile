@@ -2,7 +2,9 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get upgrade -y
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get install -y \
     git \
@@ -13,7 +15,8 @@ RUN apt-get install -y \
     softhsm2 \
     locales \
     && locale-gen en_US.UTF-8 \
-    && update-locale LANG=en_US.UTF-8
+    && update-locale LANG=en_US.UTF-8 \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV ASDF_VERSION=v0.18.0 \
     LANG=en_US.UTF-8 \
@@ -50,7 +53,8 @@ RUN apt-get install -y \
     libncurses-dev \
     openjdk-11-jdk \
     opensc \
-    opensc-pkcs11
+    opensc-pkcs11 \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV PKCS11SPY=/usr/lib/softhsm/libsofthsm2.so 
 # ENV PKCS11SPY_OUTPUT=/tmp/pkcs11spy.log
