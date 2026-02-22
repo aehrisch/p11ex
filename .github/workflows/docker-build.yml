@@ -10,7 +10,7 @@ on:
 jobs:
 
   build-linux-amd64:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -45,7 +45,8 @@ jobs:
             TARGETPLATFORM=linux/amd64
 
   build-linux-arm64:
-    runs-on: [self-hosted, Linux, ARM64]
+    runs-on: ubuntu-24.04-arm
+    #runs-on: [self-hosted, Linux, ARM64]
     timeout-minutes: 30
     permissions:
       contents: read
@@ -85,7 +86,7 @@ jobs:
 
   manifest:
     needs: [build-linux-amd64, build-linux-arm64]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
