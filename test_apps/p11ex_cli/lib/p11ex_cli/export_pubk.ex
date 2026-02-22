@@ -92,6 +92,8 @@ defmodule P11exCli.ExportPubk do
     exit().halt(:ok)
   end
 
+  @asn1_null <<0x05, 0x00>>
+
   # Export RSA public key
   defp export_rsa_key(attribs) do
     modulus = attribs[:cka_modulus]
@@ -107,9 +109,8 @@ defmodule P11exCli.ExportPubk do
     rsa_public_key = {:"RSAPublicKey", modulus, exponent}
     subject_public_key_info =
       {:"SubjectPublicKeyInfo",
-        {:AlgorithmIdentifier, {1, 2, 840, 113549, 1, 1, 1}, :NULL},
+        {:AlgorithmIdentifier, {1, 2, 840, 113549, 1, 1, 1}, @asn1_null},
         :public_key.der_encode(:"RSAPublicKey", rsa_public_key)}
-
     der = :public_key.der_encode(:"SubjectPublicKeyInfo", subject_public_key_info)
 
     encode_output(der, :pem)
@@ -126,11 +127,9 @@ defmodule P11exCli.ExportPubk do
     end
 
     with {:ok, point_bytes} when is_binary(point_bytes) <- :EC.decode(:ECPoint, ec_point),
-         {:ok, {:namedCurve, curve_oid}} <- :EC.decode(:ECParameters, ec_params) do
+         {:ok, {:namedCurve, curve_oid}} <- :EC.decode(:ECParameters, ec_params),
+         {:ok, params_der} <- :EC.encode(:ECParameters, {:namedCurve, curve_oid}) do
 
-      # Pass AlgorithmIdentifier parameters as pre-encoded DER so encoding works across
-      # OTP versions (e.g. OTP 27 encoder expects binary for open type; tuple can cause badarg).
-      params_der = :EC.encode(:ECParameters, {:namedCurve, curve_oid})
       subject_public_key_info =
         {:"SubjectPublicKeyInfo",
           {:AlgorithmIdentifier, {1, 2, 840, 10045, 2, 1}, params_der},
