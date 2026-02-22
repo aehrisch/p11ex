@@ -103,6 +103,7 @@ jobs:
             sh -c "cd /app && \
               export SOFTHSM2_CONF=$(mktemp) && \
               export MAKE_TOKEN_DIR=yes && \
+              asdf current && \
               sh test/softhsm-reset.sh && \
               cd c_src && \
               curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h && \
