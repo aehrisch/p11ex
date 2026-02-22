@@ -128,9 +128,12 @@ defmodule P11exCli.ExportPubk do
     with {:ok, point_bytes} when is_binary(point_bytes) <- :EC.decode(:ECPoint, ec_point),
          {:ok, {:namedCurve, curve_oid}} <- :EC.decode(:ECParameters, ec_params) do
 
+      # Pass AlgorithmIdentifier parameters as pre-encoded DER so encoding works across
+      # OTP versions (e.g. OTP 27 encoder expects binary for open type; tuple can cause badarg).
+      params_der = :EC.encode(:ECParameters, {:namedCurve, curve_oid})
       subject_public_key_info =
         {:"SubjectPublicKeyInfo",
-          {:AlgorithmIdentifier, {1, 2, 840, 10045, 2, 1}, {:namedCurve, curve_oid}},
+          {:AlgorithmIdentifier, {1, 2, 840, 10045, 2, 1}, params_der},
           point_bytes}
 
       der = :public_key.der_encode(:"SubjectPublicKeyInfo", subject_public_key_info)
