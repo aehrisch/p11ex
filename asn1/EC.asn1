@@ -7,4 +7,9 @@ BEGIN
 
   ECPoint ::= OCTET STRING
 
+  ECSignature ::= SEQUENCE {
+    r   INTEGER,
+    s   INTEGER
+  }
+
 END
