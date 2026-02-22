@@ -25,7 +25,7 @@ jobs:
 
       - name: Pull linux-amd64 image
         run: |
-          docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64
+          docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest
 
       - name: Build p11ex library and p11ex_cli binary
         run: |
@@ -35,10 +35,11 @@ jobs:
             -e GITHUB_EVENT_PATH=/github/event.json \
             -v ${{ github.workspace }}:/app \
             -v ${{ github.event_path }}:/github/event.json \
-            ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
+            ghcr.io/${{ github.repository }}/p11ex-test:latest \
             sh -c "cd /app && \
               export SOFTHSM2_CONF=\$(mktemp) && \
               export MAKE_TOKEN_DIR=yes && \
+              asdf current && \
               sh test/softhsm-reset.sh && \
               cd c_src && \
               curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h && \
@@ -63,7 +64,7 @@ jobs:
             -e GITHUB_EVENT_PATH=/github/event.json \
             -v ${{ github.workspace }}:/app \
             -v ${{ github.event_path }}:/github/event.json \
-            ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64 \
+            ghcr.io/${{ github.repository }}/p11ex-test:latest \
             sh -c "cd /app && \
               # Set environment variables for CLI tests
               export TEST_P11EX_PIN=1234 && \
@@ -81,6 +82,7 @@ jobs:
               fi && \
               # Run CLI tests
               echo '### Running CLI tests with existing token' && \
+              asdf current && \
               mix local.hex --force && \
               mix deps.get && \
               mix compile && \

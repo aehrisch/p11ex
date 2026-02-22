@@ -27,6 +27,10 @@ jobs:
         run: |
           uname -a
 
+      - name: Install asdf
+        run: |
+          brew install asdf
+
       - name: Install Erlang and Elixir
         run: |
           brew install erlang elixir
@@ -62,10 +66,6 @@ jobs:
           curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h 
           curl -z pkcs11t.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11t.h
           curl -z pkcs11f.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11f.h 
-
-      - name: Run asdf current
-        run: |
-          asdf current
 
       - name: Install hex and get dependencies
         run: |
