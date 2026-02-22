@@ -43,6 +43,16 @@ ${P11TOOL_PREFIX}/bin/pkcs11-tool --module ${TEST_P11EX_MODULE} \
   --keypairgen --label "ecdsa_p256" --id 32 \
   --key-type EC:secp256r1
 
+${P11TOOL_PREFIX}/bin/pkcs11-tool --module ${TEST_P11EX_MODULE} \
+  --login --pin ${TEST_P11EX_PIN} --token ${TEST_P11EX_TOKEN_LABEL} \
+  --keypairgen --label "ecdsa_p384" --id 33 \
+  --key-type EC:secp384r1
+
+${P11TOOL_PREFIX}/bin/pkcs11-tool --module ${TEST_P11EX_MODULE} \
+  --login --pin ${TEST_P11EX_PIN} --token ${TEST_P11EX_TOKEN_LABEL} \
+  --keypairgen --label "ecdsa_p521" --id 34 \
+  --key-type EC:secp521r1
+
 echo
 echo "### Wrapping keys"
 
