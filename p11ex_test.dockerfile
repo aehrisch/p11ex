@@ -20,11 +20,17 @@ ENV ASDF_VERSION=v0.18.0 \
     LC_ALL=en_US.UTF-8
 
 # Install asdf
-RUN git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch ${ASDF_VERSION}
-ENV PATH="/root/.asdf/shims:/root/.asdf/bin:$PATH"
-
-RUN echo '. "$HOME/.asdf/asdf.sh"' >> ~/.bashrc && \
-    echo '. "$HOME/.asdf/completions/asdf.bash"' >> ~/.bashrc
+RUN ASDF_ARCH="$(dpkg --print-architecture)" && \
+    case "$ASDF_ARCH" in \
+      amd64) ASDF_ARCH="amd64" ;; \
+      arm64) ASDF_ARCH="arm64" ;; \
+      *) echo "Unsupported architecture: $ASDF_ARCH" >&2; exit 1 ;; \
+    esac && \
+    curl -fsSL -o /tmp/asdf.tar.gz \
+    "https://github.com/asdf-vm/asdf/releases/download/${ASDF_VERSION}/asdf-${ASDF_VERSION}-linux-${ASDF_ARCH}.tar.gz" && \
+    tar -xzf /tmp/asdf.tar.gz -C /usr/local/bin asdf && \
+    rm /tmp/asdf.tar.gz
+ENV PATH="/root/.asdf/shims:/usr/local/bin:$PATH"
 
 # Install Erlang and Elixir
 RUN apt-get install -y \
