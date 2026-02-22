@@ -9,7 +9,7 @@ on:
 jobs:
 
   build-and-test-cli-linux-amd64:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       checks: write
       pull-requests: write
