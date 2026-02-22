@@ -27,7 +27,7 @@ jobs:
         run: |
           docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-amd64
 
-      - name: Run tests in Docker
+      - name: Run tests in Docker (OTP 27)
         run: |
           docker run --rm \
             -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
@@ -39,6 +39,9 @@ jobs:
             sh -c "cd /app && \
               export SOFTHSM2_CONF=$(mktemp) && \
               export MAKE_TOKEN_DIR=yes && \
+              echo 'elixir 1.19.5-otp-27' > .tool-versions && \
+              echo 'erlang 27.3' >> .tool-versions && \
+              asdf current && \
               sh test/softhsm-reset.sh && \
               cd c_src && \
               curl -z pkcs11.h -O https://raw.githubusercontent.com/oasis-tcs/pkcs11/master/published/3-01/pkcs11.h && \
@@ -58,7 +61,7 @@ jobs:
       - name: Upload test results and coverage (linux-amd64)
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-linux-amd64.zip
+          name: test-results-linux-amd64-otp-27.zip
           path: |
             _build/test/lib/*/test-*.xml
             cover/
@@ -70,7 +73,7 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           files: "_build/test/lib/*/test-*.xml"
-          check_name: "Test Results (linux-amd64)"
+          check_name: "Test Results (linux-amd64-otp-27)"
 
   test-linux-arm64:
     runs-on: ubuntu-24.04-arm
@@ -91,7 +94,7 @@ jobs:
         run: |
           docker pull ghcr.io/${{ github.repository }}/p11ex-test:latest-linux-arm64
 
-      - name: Run tests in Docker
+      - name: Run tests in Docker (OTP 27)
         run: |
           docker run --rm \
             -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
@@ -103,6 +106,8 @@ jobs:
             sh -c "cd /app && \
               export SOFTHSM2_CONF=$(mktemp) && \
               export MAKE_TOKEN_DIR=yes && \
+              echo 'elixir 1.19.5-otp-27' > .tool-versions && \
+              echo 'erlang 27.3' >> .tool-versions && \
               asdf current && \
               sh test/softhsm-reset.sh && \
               cd c_src && \
@@ -128,7 +133,7 @@ jobs:
       - name: Upload test results and coverage (linux-arm64)
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-linux-arm64.zip
+          name: test-results-linux-arm64-otp-27.zip
           path: |
             _build/test/lib/*/test-*.xml
             cover/
@@ -140,7 +145,7 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           files: "_build/test/lib/*/test-*.xml"
-          check_name: "Test Results (linux-arm64)"
+          check_name: "Test Results (linux-arm64-otp-27)"
 
       - name: Cleanup temporary files
         if: always()
