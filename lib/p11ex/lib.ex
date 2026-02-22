@@ -861,6 +861,7 @@ defmodule P11ex.Lib do
     :: :ok | {:error, atom()} | {:error, atom(), any()}
   def sign_init(%SessionHandle{} = session, mechanism, %ObjectHandle{} = key)
       when is_tuple(mechanism) do
+    Logger.debug("sign_init: #{inspect(mechanism)}")
     n_sign_init(session.module.ref, session.handle, mechanism, key.handle)
   end
 
