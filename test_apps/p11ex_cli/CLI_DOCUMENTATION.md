@@ -15,6 +15,8 @@ The `p11ex_cli` is a command-line interface for interacting with PKCS#11 cryptog
   - [key-unwrap](#key-unwrap)
   - [kcv-gen](#kcv-gen)
   - [bench-aes-encrypt-block](#bench-aes-encrypt-block)
+  - [sign](#sign)
+  - [export-pubk](#export-pubk)
   - [help](#help)
 - [Usage Examples](#usage-examples)
 - [Environment Variables](#environment-variables)
@@ -83,6 +85,32 @@ Available for commands that produce output:
 | Option | Short | Type | Default | Description |
 |--------|-------|------|---------|-------------|
 | `--output-format` | `-f` | string | text | Output format (json, text) |
+
+### Using Environment Variables
+
+For automation and scripts, use environment variables:
+
+```bash
+export P11EX_MODULE=/usr/lib/softhsm/libsofthsm2.so
+export P11EX_PIN=1234
+
+p11ex list-slots
+p11ex list-objects -l MyToken seck
+```
+
+### Using PIN Files
+
+For enhanced security, store PINs in files:
+
+```bash
+echo "1234" > /secure/path/pin.txt
+chmod 600 /secure/path/pin.txt
+
+p11ex list-objects -m /usr/lib/softhsm/libsofthsm2.so \
+  -l MyToken \
+  --pin-file /secure/path/pin.txt \
+  seck
+```
 
 ## Commands
 
@@ -552,6 +580,160 @@ p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   - Comparing encryption performance across different HSMs
   - Stress testing with multiple parallel sessions
 
+### sign
+
+Signs data with a private key using various signature mechanisms. Supports RSA PKCS#1 v1.5, RSA PSS, and ECDSA. The command takes a **signature mechanism** and a **digest mechanism** as separate arguments; the digest controls whether input is raw data (hashed by token or by the CLI) or an already-computed hash.
+
+**Usage:**
+```bash
+p11ex sign [OPTIONS] <mechanism> <digest> <key_ref> <input_file> <output_file>
+```
+
+**Arguments:**
+- `mechanism` (required): Signature mechanism
+  - **RSA PKCS#1 v1.5** (hash then sign): `rsa_pkcs` — use with digest `sha`, `sha224`, `sha256`, `sha384`, or `sha512`; the token hashes the input and signs the DigestInfo.
+  - **RSA PKCS#1 v1.5** (pre-hashed input): `rsa_pkcs_sha1`, `rsa_pkcs_sha224`, `rsa_pkcs_sha256`, `rsa_pkcs_sha384`, `rsa_pkcs_sha512` — use with digest `none`; input file must contain the hash (e.g. SHA-256 digest).
+  - **RSA PSS** (hash then sign): `rsa_pkcs_pss` — use with digest `sha`, `sha224`, `sha256`, `sha384`, or `sha512`; the CLI hashes the input and the token signs with PSS.
+  - **RSA PSS** (pre-hashed input): `rsa_pkcs_pss_sha`, `rsa_pkcs_pss_sha224`, `rsa_pkcs_pss_sha256`, `rsa_pkcs_pss_sha384`, `rsa_pkcs_pss_sha512` — use with digest `none`; input file must contain the hash.
+  - **ECDSA**: `ecdsa_plain` — use with digest `none` for pre-computed hash input, or with digest `sha256`, `sha384`, or `sha512` to have the CLI hash the input before signing.
+- `digest` (required): Digest mechanism
+  - `none`: Input is already a hash (for pre-hashed mechanisms or `ecdsa_plain` with raw hash).
+  - `sha`, `sha224`, `sha256`, `sha384`, `sha512`: Hash algorithm when mechanism hashes internally (e.g. `rsa_pkcs` + `sha256`) or when the CLI pre-hashes (e.g. `rsa_pkcs_pss` + `sha256`, or `ecdsa_plain` + `sha256`).
+- `key_ref` (required): Reference to the private key
+  - Format: `label:name`, `id:hexstring`, or `handle:number`
+  - The key must be a private key (`CKO_PRIVATE_KEY`) with `CKA_SIGN` set to true.
+- `input_file` (required): Path to input file (raw data or hash, depending on mechanism and digest).
+- `output_file` (required): Path to output file for the signature.
+
+**Options:**
+- All global and token authentication options
+- `--format` / `-f` (string, default: `bin`): Output format for signature
+  - `bin`: Raw binary
+  - `hex`: Lowercase hexadecimal
+  - `base64`: Base64 encoding
+
+**Mechanism and digest combinations:**
+- **RSA PKCS#1 v1.5, token hashes**: `rsa_pkcs` with digest `sha`|`sha224`|`sha256`|`sha384`|`sha512` — pass raw data as input.
+- **RSA PKCS#1 v1.5, pre-hashed**: `rsa_pkcs_sha1`|`rsa_pkcs_sha224`|…|`rsa_pkcs_sha512` with digest `none` — pass hash bytes as input.
+- **RSA PSS, CLI hashes**: `rsa_pkcs_pss` with digest `sha`|…|`sha512` — pass raw data as input.
+- **RSA PSS, pre-hashed**: `rsa_pkcs_pss_sha`|…|`rsa_pkcs_pss_sha512` with digest `none` — pass hash bytes as input.
+- **ECDSA, pre-hashed**: `ecdsa_plain` with digest `none` — input file is the hash (e.g. 32 bytes for SHA-256).
+- **ECDSA, CLI hashes**: `ecdsa_plain` with digest `sha256`|`sha384`|`sha512` — pass raw data; CLI hashes it then signs.
+
+**Example Usage:**
+```bash
+# Sign raw data with RSA PKCS#1 v1.5 SHA-256 (token hashes)
+p11ex sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  rsa_pkcs sha256 \
+  label:MyRSAPrivateKey \
+  input_data.dat \
+  signature.bin
+
+# Sign raw data with RSA PSS SHA-256 (CLI hashes, token signs PSS)
+p11ex sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  -f hex \
+  rsa_pkcs_pss sha256 \
+  label:MyRSAPrivateKey \
+  input_data.dat \
+  signature.hex
+
+# Sign pre-computed hash with RSA PKCS#1 v1.5 (digest none)
+p11ex sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  rsa_pkcs_sha256 none \
+  label:MyRSAPrivateKey \
+  data_hash.dat \
+  signature.bin
+
+# Sign pre-computed hash with ECDSA (digest none)
+p11ex sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  ecdsa_plain none \
+  label:MyECPrivateKey \
+  hash.dat \
+  signature.bin
+
+# Sign raw data with ECDSA (CLI hashes with SHA-256)
+p11ex sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  ecdsa_plain sha256 \
+  label:MyECPrivateKey \
+  input_data.dat \
+  signature.hex
+
+# Sign a file and verify with OpenSSL
+p11ex export-pubk id:02 > rsa-pubk.pem
+dd if=/dev/urandom count=100 bs=1024 of=100kb.bin
+p11ex sign rsa_pkcs sha256 id:02 100kb.bin sig.bin
+openssl dgst -sha256 -verify rsa-pubk.pem -signature sig.bin 100kb.bin
+```
+
+**Example Output:**
+```
+Signature written to: signature.hex
+```
+
+**Notes:**
+- **Output format**: ECDSA signatures are written as ASN.1 DER: the token’s raw r||s value is converted to a SEQUENCE of two INTEGERs (r, s). RSA signatures are written as raw bytes (PKCS#1 v1.5 or PSS block) with no extra encoding.
+- **OpenSSL verification**: These formats match what OpenSSL expects. Verify with `openssl dgst -<digest> -verify pubkey.pem -signature sig.bin datafile` (use the same digest as when signing). For RSA PKCS#1 v1.5 and ECDSA this is sufficient; for RSA PSS use `openssl pkeyutl -verify` with the matching PSS and digest options.
+- For RSA PKCS#1 v1.5 with `rsa_pkcs` + digest, the token performs hashing and signs the DigestInfo; no pre-hashing is done by the CLI.
+- For RSA PSS and for ECDSA with a digest, the CLI hashes the input (using the given digest) and the token signs the hash.
+- The private key must have `CKA_SIGN=true` and key type must match the mechanism (RSA or EC).
+- Input and output are file paths only; stdin/stdout are not supported.
+
+### export-pubk
+
+Exports a public key from the token in PEM or DER format compatible with OpenSSL.
+
+**Usage:**
+```bash
+p11ex export-pubk [OPTIONS] <key_ref>
+```
+
+**Arguments:**
+- `key_ref` (required): Reference to the public key
+  - Format: `label:name`, `id:hexstring`, or `handle:number`
+  - The key must be a public key (`CKO_PUBLIC_KEY`)
+
+**Options:**
+- All global and token authentication options
+
+**Supported Key Types:**
+- RSA public keys (CKK_RSA)
+- EC public keys (CKK_EC, CKK_ECDSA)
+
+**Example Usage:**
+```bash
+# Export RSA public key in PEM format (default)
+p11ex export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  label:MyRSAPublicKey > pubkey.pem
+
+# Verify with OpenSSL
+p11ex export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  label:MyRSAPublicKey | openssl rsa -pubin -text -noout
+
+# Export EC key and verify with OpenSSL
+p11ex export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+  label:MyECPublicKey | openssl ec -pubin -text -noout
+```
+
+**Example Output:**
+```bash
+# Command writes to stdout, redirect to file as needed
+p11ex export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken label:MyKey > key.pem
+
+# PEM format includes standard headers
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
+-----END PUBLIC KEY-----
+```
+
+**Notes:**
+- Output is written to stdout (redirect to file as needed)
+- PEM format includes standard headers (`-----BEGIN PUBLIC KEY-----`)
+- Keys exported are in standard OpenSSL-compatible format
+- The exported key can be used with OpenSSL, Python cryptography, and other standard tools
+- For RSA keys, both modulus and public exponent must be accessible
+- For EC keys, both EC parameters and EC point must be accessible
+- Unsupported key types (e.g., DSA, DH) will result in an error
+
 ### help
 
 Shows help information for commands.
@@ -573,173 +755,3 @@ p11ex help
 p11ex help list-objects
 p11ex help key-gen-aes
 ```
-
-## Usage Examples
-
-### Basic Workflow
-
-1. **List available slots:**
-   ```bash
-   p11ex list-slots -m /usr/lib/softhsm/libsofthsm2.so
-   ```
-
-2. **List objects in a token:**
-   ```bash
-   p11ex list-objects -m /usr/lib/softhsm/libsofthsm2.so -l MyToken seck
-   ```
-
-3. **Generate a new key:**
-   ```bash
-   p11ex key-gen-aes -m /usr/lib/softhsm/libsofthsm2.so -l MyToken "NewKey" 256
-   ```
-
-### Using Environment Variables
-
-For automation and scripts, use environment variables:
-
-```bash
-export P11EX_MODULE=/usr/lib/softhsm/libsofthsm2.so
-export P11EX_PIN=1234
-
-p11ex list-slots
-p11ex list-objects -l MyToken seck
-```
-
-### Using PIN Files
-
-For enhanced security, store PINs in files:
-
-```bash
-echo "1234" > /secure/path/pin.txt
-chmod 600 /secure/path/pin.txt
-
-p11ex list-objects -m /usr/lib/softhsm/libsofthsm2.so \
-  -l MyToken \
-  --pin-file /secure/path/pin.txt \
-  seck
-```
-
-### JSON Output for Scripting
-
-Use JSON output format for programmatic processing:
-
-```bash
-p11ex list-objects -m /usr/lib/softhsm/libsofthsm2.so \
-  -l MyToken \
-  -f json \
-  seck | jq '.[] | select(.attribs[] | select(.attrib == ":cka_label") | .value == "MyKey")'
-```
-
-### Key Wrapping and Unwrapping Workflow
-
-This example demonstrates how to wrap a key for export and then unwrap it back into the token:
-
-```bash
-# Step 1: Generate a wrapping key with wrap/unwrap capabilities
-p11ex key-gen-aes -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
-  --wrap --unwrap \
-  "MyWrappingKey" 256
-
-# Step 2: Generate a key to be wrapped (must be extractable)
-p11ex key-gen-aes -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
-  --encrypt --decrypt --extract \
-  "MySecretKey" 256
-
-# Step 3: Wrap the key for export (outputs to hex file by default)
-p11ex key-wrap -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
-  ckm_aes_key_wrap_pad \
-  label:MyWrappingKey \
-  label:MySecretKey \
-  exported_key.hex
-
-# Step 4: The wrapped key can now be stored externally or transferred
-# Later, unwrap it back into the token with new attributes
-p11ex key-unwrap -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
-  --key-label "ImportedSecretKey" \
-  --key-type aes \
-  --key-class seck \
-  --encrypt --decrypt \
-  ckm_aes_key_wrap_pad \
-  label:MyWrappingKey \
-  exported_key.hex
-```
-
-### Key Check Value (KCV) Workflow
-
-This example demonstrates how to generate KCVs to verify key integrity:
-
-```bash
-# Step 1: Generate a key for testing
-p11ex key-gen-aes -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
-  --encrypt --decrypt \
-  "MyTestKey" 256
-
-# Step 2: Generate the KCV for verification
-# Save the KCV to a file for later comparison
-p11ex kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
-  label:MyTestKey > kcv.txt
-
-# Step 3: Generate KCVs for multiple keys at once
-p11ex kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
-  label:MyTestKey label:AnotherKey label:ThirdKey
-
-# Step 4: Use JSON output to programmatically verify keys
-p11ex kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
-  -f json label:MyTestKey | jq '.[] | select(.result.status == "ok")'
-```
-
-### Performance Benchmarking Workflow
-
-This example demonstrates how to benchmark AES encryption performance:
-
-```bash
-# Step 1: Generate a key for benchmarking
-p11ex key-gen-aes -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
-  --encrypt --decrypt \
-  "BenchKey" 256
-
-# Step 2: Run single-session benchmark
-# This measures encryption performance with sequential operations
-p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
-  label:BenchKey
-
-# Step 3: Run parallel benchmark with 4 sessions
-# This measures throughput with concurrent encryption operations
-p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
-  --number-sessions 4 \
-  label:BenchKey
-
-# Step 4: Run extended benchmark with more rounds for better statistics
-p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
-  --rounds 50 \
-  label:BenchKey
-
-# Step 5: Process results programmatically
-# Extract and analyze performance metrics
-p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
-  label:BenchKey | jq '.measurements[] | {size: .block_size_bytes, duration_ms: .average_duration_ms}'
-```
-
-## Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `P11EX_MODULE` | Path to PKCS#11 module file | Yes* |
-| `P11EX_PIN` | Authentication PIN for token | Yes* |
-
-*Required if not specified via command-line options
-
-## Error Handling
-
-The CLI provides detailed error messages for common issues:
-
-- **Module loading errors**: Invalid module path or incompatible library
-- **Authentication errors**: Invalid PIN or token access issues
-- **Token errors**: Token not found, insufficient permissions
-- **Object errors**: Invalid object types, object not found
-- **Validation errors**: Invalid arguments or options
-
-**Exit Codes:**
-- `0`: Success
-- `1`: General error (module loading, authentication, etc.)
-- `2`: Validation error (invalid arguments, options, etc.)
