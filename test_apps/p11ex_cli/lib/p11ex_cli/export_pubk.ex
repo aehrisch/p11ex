@@ -116,6 +116,17 @@ defmodule P11exCli.ExportPubk do
     encode_output(der, :pem)
   end
 
+  # OTP 27 expects AlgorithmIdentifier parameters as pre-encoded DER; OTP 28 expects decoded tuple.
+  defp ec_algorithm_parameters(curve_oid) do
+    otp_major = System.otp_release() |> String.to_integer()
+    if otp_major >= 28 do
+      {:namedCurve, curve_oid}
+    else
+      {:ok, der} = :EC.encode(:ECParameters, {:namedCurve, curve_oid})
+      der
+    end
+  end
+
   # Export EC public key
   defp export_ec_key(attribs) do
     ec_params = attribs[:cka_ec_params]
@@ -127,12 +138,14 @@ defmodule P11exCli.ExportPubk do
     end
 
     with {:ok, point_bytes} when is_binary(point_bytes) <- :EC.decode(:ECPoint, ec_point),
-         {:ok, {:namedCurve, curve_oid}} <- :EC.decode(:ECParameters, ec_params),
-         {:ok, params_der} <- :EC.encode(:ECParameters, {:namedCurve, curve_oid}) do
+         {:ok, {:namedCurve, curve_oid}} <- :EC.decode(:ECParameters, ec_params) do
+      # OTP 27: AlgorithmIdentifier parameters must be pre-encoded DER (binary).
+      # OTP 28: parameters must be decoded form (tuple); DER causes element/2 on binary.
+      algo_params = ec_algorithm_parameters(curve_oid)
 
       subject_public_key_info =
         {:"SubjectPublicKeyInfo",
-          {:AlgorithmIdentifier, {1, 2, 840, 10045, 2, 1}, params_der},
+          {:AlgorithmIdentifier, {1, 2, 840, 10045, 2, 1}, algo_params},
           point_bytes}
 
       der = :public_key.der_encode(:"SubjectPublicKeyInfo", subject_public_key_info)
