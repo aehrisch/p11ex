@@ -680,7 +680,7 @@ Signature written to: signature.hex
 
 ### export-pubk
 
-Exports a public key from the token in PEM or DER format compatible with OpenSSL.
+Exports a public key from the token as a PEM-encoded SubjectPublicKeyInfo (SPKI), compatible with OpenSSL and other standard tools.
 
 **Usage:**
 ```bash
@@ -696,43 +696,50 @@ p11ex export-pubk [OPTIONS] <key_ref>
 - All global and token authentication options
 
 **Supported Key Types:**
-- RSA public keys (CKK_RSA)
-- EC public keys (CKK_EC, CKK_ECDSA)
+- RSA public keys (`CKK_RSA`)
+- EC public keys (`CKK_EC`, `CKK_ECDSA`)
+
+**Output format:**
+- Output is always PEM. The key is encoded as SubjectPublicKeyInfo (SPKI): algorithm identifier plus key material.
+- **RSA**: algorithm `rsaEncryption` (1.2.840.113549.1.1.1), key is DER-encoded RSAPublicKey (modulus and public exponent).
+- **EC**: algorithm `id-ecPublicKey` (1.2.840.10045.2.1) with `namedCurve` parameters, key is the EC point as an OCTET STRING.
 
 **Example Usage:**
 ```bash
-# Export RSA public key in PEM format (default)
+# Export RSA public key to a file
 p11ex export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   label:MyRSAPublicKey > pubkey.pem
 
-# Verify with OpenSSL
+# Inspect with OpenSSL
 p11ex export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   label:MyRSAPublicKey | openssl rsa -pubin -text -noout
 
-# Export EC key and verify with OpenSSL
 p11ex export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   label:MyECPublicKey | openssl ec -pubin -text -noout
+
+# Export then use for signature verification (see sign command)
+p11ex export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken label:MyKey > key.pem
+openssl dgst -sha256 -verify key.pem -signature sig.bin datafile
 ```
 
 **Example Output:**
-```bash
-# Command writes to stdout, redirect to file as needed
+```
+# Command always writes PEM to stdout; redirect to file as needed
 p11ex export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken label:MyKey > key.pem
 
-# PEM format includes standard headers
+# PEM uses the standard PUBLIC KEY wrapper
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
 -----END PUBLIC KEY-----
 ```
 
 **Notes:**
-- Output is written to stdout (redirect to file as needed)
-- PEM format includes standard headers (`-----BEGIN PUBLIC KEY-----`)
-- Keys exported are in standard OpenSSL-compatible format
-- The exported key can be used with OpenSSL, Python cryptography, and other standard tools
-- For RSA keys, both modulus and public exponent must be accessible
-- For EC keys, both EC parameters and EC point must be accessible
-- Unsupported key types (e.g., DSA, DH) will result in an error
+- Output is written to stdout only (redirect to a file as needed). There is no option to output DER or to write to a file directly.
+- PEM uses the standard `-----BEGIN PUBLIC KEY-----` / `-----END PUBLIC KEY-----` headers (SubjectPublicKeyInfo).
+- **OpenSSL compatibility**: The exported PEM is standard SPKI and can be used with OpenSSL for verification (`openssl dgst -verify`, `openssl pkeyutl -verify`), inspection (`openssl rsa -pubin -text -noout`, `openssl ec -pubin -text -noout`), and with other tools (e.g. Python `cryptography`).
+- For RSA keys, both `CKA_MODULUS` and `CKA_PUBLIC_EXPONENT` must be readable; if either is inaccessible, the command fails.
+- For EC keys, both `CKA_EC_PARAMS` and `CKA_EC_POINT` must be readable; if either is inaccessible, the command fails.
+- Unsupported key types (e.g. DSA, DH) result in an error.
 
 ### help
 
