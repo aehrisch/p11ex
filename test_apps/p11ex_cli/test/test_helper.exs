@@ -3,6 +3,12 @@ Code.require_file("support/halt_mock.ex", __DIR__)
 
 defmodule P11exCli.TestHelper do
 
+  @sizes [7, 16, 512, 729, 1024, 8192, 65536, 1024*1024, 10*1024*1024, 100*1024*1024]
+
+  def sizes do
+    @sizes
+  end
+
   def setup_all do
     Application.put_env(:p11ex_cli, :exit_mod, P11exCli.HaltMock)
 
@@ -46,7 +52,70 @@ defmodule P11exCli.TestHelper do
     Path.expand(temp_file)
   end
 
+  def write_test_files(sizes \\ @sizes) do
+    sizes
+    |> Enum.map(fn size ->
+      file = Path.join(System.tmp_dir!(), "test_input_#{size}.bin")
+      File.write!(file, :crypto.strong_rand_bytes(size))
+      {size, file}
+    end)
+    |> Map.new()
+  end
+
+  def cleanup_test_files(sizes \\ @sizes) do
+    sizes
+    |> Enum.each(fn size ->
+      File.rm(Path.join(System.tmp_dir!(), "test_input_#{size}.bin"))
+    end)
+  end
+
 end
+
+
+defmodule P11exCli.OpenSSLVerify do
+  import ExUnit.Assertions
+  import Logger
+
+  def verify(:pss, pubk_file, sig_file, data_file, openssl_digest_alg, salt_len) do
+    args =
+      ["dgst", openssl_digest_alg, "-sigopt", "rsa_padding_mode:pss", "-sigopt", "rsa_pss_saltlen:#{salt_len}"] ++
+      ["-verify", pubk_file, "-signature", sig_file, data_file]
+    really_run(args)
+  end
+
+  def verify(:pkcs15, pubk_file, sig_file, data_file, openssl_digest_alg) do
+    args =
+      ["dgst", openssl_digest_alg, "-verify", pubk_file, "-signature", sig_file, data_file]
+    really_run(args)
+  end
+
+  def verify(:ecdsa, pubk_file, sig_file, data_file, openssl_digest_alg) do
+    args =
+      [
+        "dgst", openssl_digest_alg,
+        "-verify", pubk_file,
+        "-signature", sig_file,
+        data_file
+      ]
+    really_run(args)
+  end
+
+  defp really_run(args) do
+    {output, exit_code} = System.cmd("openssl", args, [stderr_to_stdout: true])
+    if exit_code == 0 do
+      Logger.debug("success, openssl args #{inspect(args)}")
+      :ok
+    else
+      Logger.warning("openssl signature verification failed (exit code #{exit_code}), args #{inspect(args)}")
+      Logger.warning("output: #{output}")
+      flunk("openssl signature verification failed (exit code #{exit_code}), args #{inspect(args)}")
+      {:error, output}
+    end
+  end
+
+end
+
+
 
 ExUnit.configure(formatters: [JUnitFormatter, ExUnit.CLIFormatter])
 ExUnit.start()

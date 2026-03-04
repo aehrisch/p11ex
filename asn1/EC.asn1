@@ -5,4 +5,11 @@ BEGIN
     namedCurve         OBJECT IDENTIFIER
   }
 
+  ECPoint ::= OCTET STRING
+
+  ECSignature ::= SEQUENCE {
+    r   INTEGER,
+    s   INTEGER
+  }
+
 END

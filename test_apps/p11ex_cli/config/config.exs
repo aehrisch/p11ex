@@ -8,4 +8,8 @@ config :p11ex_cli,
   block_sizes: [32, 256, 1024, 8192, 65536, 262144],
   rounds_per_block: 10  # Default number of rounds per block size
 
+config :p11ex_cli,
+  :sign,
+  stdin_chunk_size: 8192
+
 import_config "#{config_env()}.exs"

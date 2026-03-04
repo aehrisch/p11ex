@@ -5,7 +5,7 @@ on:
 
 jobs:
   calculate-version:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/main'
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -55,7 +55,7 @@ jobs:
           retention-days: 30
 
   no-release-needed:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: calculate-version
     if: needs.calculate-version.result == 'success' && needs.calculate-version.outputs.no_release == 'true'
     steps:
@@ -71,7 +71,7 @@ jobs:
           echo "- BREAKING CHANGE: for breaking changes" >> $GITHUB_STEP_SUMMARY
 
   build-linux-amd64:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: calculate-version
     if: needs.calculate-version.result == 'success' && needs.calculate-version.outputs.no_release != 'true'
     steps:
@@ -124,7 +124,7 @@ jobs:
             test_apps/p11ex_cli/p11ex_cli
 
   build-linux-arm64:
-    runs-on: [self-hosted, Linux, ARM64]
+    runs-on: ubuntu-24.04-arm
     needs: calculate-version
     if: needs.calculate-version.result == 'success' && needs.calculate-version.outputs.no_release != 'true'
     steps:
@@ -260,7 +260,7 @@ jobs:
             test_apps/p11ex_cli/p11ex_cli
 
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [calculate-version, build-linux-amd64, build-linux-arm64, build-macos-arm64]
     if: needs.calculate-version.result == 'success' && needs.calculate-version.outputs.no_release != 'true'
     permissions:

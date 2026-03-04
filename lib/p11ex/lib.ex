@@ -174,8 +174,7 @@ defmodule P11ex.Lib do
     Create a new object handle and associate it with a session.
     """
     @spec new(session(), handle()) :: t()
-    def new(%SessionHandle{} = session, handle)
-        when is_integer(handle) and handle >= 0 do
+    def new(%P11ex.Lib.SessionHandle{} = session, handle) when is_integer(handle) and handle >= 0 do
       %__MODULE__{session: session, handle: handle}
     end
 
@@ -862,6 +861,7 @@ defmodule P11ex.Lib do
     :: :ok | {:error, atom()} | {:error, atom(), any()}
   def sign_init(%SessionHandle{} = session, mechanism, %ObjectHandle{} = key)
       when is_tuple(mechanism) do
+    Logger.debug("sign_init: #{inspect(mechanism)}")
     n_sign_init(session.module.ref, session.handle, mechanism, key.handle)
   end
 

@@ -17,5 +17,11 @@ fi
 
 echo "### Running tests with existing token"
 
+if [ -n "${DO_SPY:-}" ]; then
+  echo "### Running with spy"
+  export TEST_P11EX_MODULE=/opt/homebrew/Cellar/opensc/0.26.1/lib/pkcs11-spy.so
+  export PKCS11SPY=${P11EX_SPY:-${SOFTHSM_PREFIX}/lib/softhsm/libsofthsm2.so}
+fi
+
 #exec env MIX_ENV=test mix test --cover $@
 exec env MIX_ENV=test mix coveralls.html $@

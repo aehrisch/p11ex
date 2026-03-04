@@ -21,6 +21,8 @@ defmodule P11exCli do
       "key-unwrap" -> P11exCli.KeyUnwrap.main(rest)
       "kcv-gen" -> P11exCli.KcvGen.main(rest)
       "bench-aes-encrypt-block" -> P11exCli.BenchAesEncryptBlock.main(rest)
+      "sign" -> P11exCli.Sign.main(rest)
+      "export-pubk" -> P11exCli.ExportPubk.main(rest)
       _ ->
         IO.puts("Unknown subcommand: #{subcommand}")
         print_usage()
@@ -33,7 +35,7 @@ defmodule P11exCli do
 
   defp print_usage do
     IO.puts("Usage: p11ex <subcommand> [options]")
-    IO.puts("Available subcommands: help, list-slots, list-objects, key-gen-aes, key-wrap, key-unwrap, kcv-gen, bench-aes-encrypt-block")
+    IO.puts("Available subcommands: help, list-slots, list-objects, key-gen-aes, key-wrap, key-unwrap, kcv-gen, bench-aes-encrypt-block, sign, export-pubk")
     IO.puts("Use 'p11ex help <subcommand>' for detailed help")
   end
 end
@@ -67,9 +69,11 @@ defmodule P11exCli.Help do
       "key-unwrap" -> P11exCli.KeyUnwrap.format_usage()
       "kcv-gen" -> P11exCli.KcvGen.format_usage()
       "bench-aes-encrypt-block" -> P11exCli.BenchAesEncryptBlock.format_usage()
+      "sign" -> P11exCli.Sign.format_usage()
+      "export-pubk" -> P11exCli.ExportPubk.format_usage()
       _ ->
         IO.puts("Unknown subcommand: #{subcommand}")
-        IO.puts("Available subcommands: list-slots, list-objects, key-gen-aes, key-wrap, key-unwrap, bench-aes-encrypt-block")
+        IO.puts("Available subcommands: list-slots, list-objects, key-gen-aes, key-wrap, key-unwrap, bench-aes-encrypt-block, sign, export-pubk")
     end
   end
 end

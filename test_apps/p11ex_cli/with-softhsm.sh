@@ -19,6 +19,9 @@ fi
 if [ ! -d "token" ]; then
   echo "### token directory does not exist, initializing"
   mkdir -p token
+  export TEST_P11EX_MODULE=${P11EX_MODULE}
+  export TEST_P11EX_TOKEN_LABEL=${P11EX_TOKEN_LABEL}
+  export TEST_P11EX_PIN=${P11EX_PIN}
   source ./cli-softhsm-init.sh
 fi
 
