@@ -583,7 +583,7 @@ defmodule P11ex.Session do
         Logger.info("already logged in as #{user_type}")
         Module.register_login(user_type)
         {:reply, :ok, state}
-      false ->
+      nil ->
         case Lib.session_login(state.session, user_type, pin) do
           :ok ->
             Logger.info("logged in as #{user_type}")
