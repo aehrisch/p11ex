@@ -417,7 +417,7 @@ defmodule P11ex.Lib do
   end
 
   def close_session(%SessionHandle{} = session) do
-    n_close_session(session.module.ref(), session.handle)
+    n_close_session(session.module.ref, session.handle)
   end
 
   def close_all_sessions(%ModuleHandle{} = module, slot_id)
