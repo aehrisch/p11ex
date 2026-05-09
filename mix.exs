@@ -36,7 +36,7 @@ defmodule P11ex.MixProject do
   defp package do
     [
       name: "p11ex",
-      files: ~w(lib src mix.exs README.md LICENSE),
+      files: ~w(lib asn1 c_src scripts mix.exs Makefile README.md LICENSE),
       maintainers: ["Eric Knauel"],
       licenses: ["BSD-3-Clause"],
       links: %{
