@@ -71,6 +71,8 @@ debug-info:
 all: debug-info $(NIF_SO)
 
 $(NIF_SO): c_src/p11ex_nif.c
+	chmod +x scripts/*.sh
+	test -f c_src/pkcs11.h || scripts/download-pkcs11-headers.sh c_src
 	mkdir -p $(PRIV_DIR)
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
