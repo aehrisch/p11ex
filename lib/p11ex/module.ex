@@ -39,12 +39,23 @@ defmodule P11ex.Module do
   # Public API
 
   @doc """
-  Start the `P11ex.Module` GenServer. The argument is the path to the
-  PKCS#11 module file (shared library).
+  Start the `P11ex.Module` GenServer. The argument is either the path to the
+  PKCS#11 module file (shared library); or a list starting with the path to the
+  PKCS#11 module file, followed by other keyword options.
+
+  The keyword options are:
+
+  * `name` - GenServer name (defaults to `P11ex.Module`).
   """
-  @spec start_link(binary()) :: GenServer.on_start()
+  @spec start_link(binary() | keyword()) :: GenServer.on_start()
   def start_link(args) do
-    GenServer.start_link(__MODULE__, args, name: __MODULE__)
+    {path, name} =
+      case args do
+        [path | opts] -> {path, Keyword.get(opts, :name, __MODULE__)}
+        _ -> {args, __MODULE__}
+      end
+
+    GenServer.start_link(__MODULE__, path, name: name)
   end
 
   @impl true
@@ -68,17 +79,17 @@ defmodule P11ex.Module do
   List all slots in the module. The `token_present?` argument is optional and
   defaults to `true`. If set to `true`, only slots with a token present are returned.
   """
-  @spec list_slots(boolean()) :: {:ok, list(Slot.t())} | {:error, atom()}
-  def list_slots(token_present?) when is_boolean(token_present?) do
-    GenServer.call(__MODULE__, {:list_slots, token_present?})
+  @spec list_slots(GenServer.server(), boolean()) :: {:ok, list(Slot.t())} | {:error, atom()}
+  def list_slots(server \\ __MODULE__, token_present?) when is_boolean(token_present?) do
+    GenServer.call(server, {:list_slots, token_present?})
   end
 
   @doc """
   Find the slot that contains a token with the given label.
   """
-  @spec find_slot_by_tokenlabel(binary()) :: {:ok, Slot.t()} | {:ok, nil} | {:error, atom()}
-  def find_slot_by_tokenlabel(label) when is_binary(label) do
-    GenServer.call(__MODULE__, {:find_slot_by_tokenlabel, label})
+  @spec find_slot_by_tokenlabel(GenServer.server(), binary()) :: {:ok, Slot.t()} | {:ok, nil} | {:error, atom()}
+  def find_slot_by_tokenlabel(server \\ __MODULE__, label) when is_binary(label) do
+    GenServer.call(server, {:find_slot_by_tokenlabel, label})
   end
 
   @doc """
@@ -108,14 +119,16 @@ defmodule P11ex.Module do
   * `firmware_version` - The firmware version of the token (a tuple of integers)
   * `utc_time` - The UTC time of the token (a string)
   """
-  @spec token_info(non_neg_integer()) :: {:ok, map()} | {:error, atom()}
-  def token_info(slot_id) when is_integer(slot_id) do
-    GenServer.call(__MODULE__, {:token_info, %Slot{module: self(), slot_id: slot_id}})
+  def token_info(server \\ __MODULE__, slot)
+
+  @spec token_info(GenServer.server(), non_neg_integer()) :: {:ok, map()} | {:error, atom()}
+  def token_info(server, slot_id) when is_integer(slot_id) do
+    GenServer.call(server, {:token_info, %Slot{module: self(), slot_id: slot_id}})
   end
 
-  @spec token_info(Slot.t()) :: {:ok, map()} | {:error, atom()}
-  def token_info(%Slot{} = slot) do
-    GenServer.call(__MODULE__, {:token_info, slot})
+  @spec token_info(GenServer.server(), Slot.t()) :: {:ok, map()} | {:error, atom()}
+  def token_info(server, %Slot{} = slot) do
+    GenServer.call(server, {:token_info, slot})
   end
 
   @doc """
@@ -127,14 +140,16 @@ defmodule P11ex.Module do
   The mechanisms are returned as a list of atoms. If the mechanism is not known to P11ex
   (e.g. a vendor specific mechanism), it will be returned as an integer.
   """
-  @spec list_mechanisms(non_neg_integer()) :: {:ok, list(atom() | non_neg_integer())} | {:error, atom()}
-  def list_mechanisms(slot_id) when is_integer(slot_id) do
-    GenServer.call(__MODULE__, {:list_mechanisms, %Slot{module: self(), slot_id: slot_id}})
+  @spec list_mechanisms(GenServer.server(), non_neg_integer()) :: {:ok, list(atom() | non_neg_integer())} | {:error, atom()}
+  def list_mechanisms(server \\ __MODULE__, slot)
+
+  def list_mechanisms(server, slot_id) when is_integer(slot_id) do
+    GenServer.call(server, {:list_mechanisms, %Slot{module: self(), slot_id: slot_id}})
   end
 
-  @spec list_mechanisms(Slot.t()) :: {:ok, list(atom() | non_neg_integer())} | {:error, atom()}
-  def list_mechanisms(slot) do
-    GenServer.call(__MODULE__, {:list_mechanisms, slot})
+  @spec list_mechanisms(GenServer.server(), Slot.t()) :: {:ok, list(atom() | non_neg_integer())} | {:error, atom()}
+  def list_mechanisms(server, %Slot{} = slot) do
+    GenServer.call(server, {:list_mechanisms, slot})
   end
 
   @doc """
@@ -164,13 +179,13 @@ defmodule P11ex.Module do
   If the mechanism is not known, the return value is
   `{:error, {:C_GetMechanismInfo, :ckr_mechanism_invalid}}`.
   """
-  @spec mechanism_info(Slot.t(), atom() | non_neg_integer()) :: {:ok, map()} | {:error, atom()}
-  def mechanism_info(slot, mechanism_type) do
-    GenServer.call(__MODULE__, {:mechanism_info, slot, mechanism_type})
+  @spec mechanism_info(GenServer.server(), Slot.t(), atom() | non_neg_integer()) :: {:ok, map()} | {:error, atom()}
+  def mechanism_info(server \\ __MODULE__, slot, mechanism_type) do
+    GenServer.call(server, {:mechanism_info, slot, mechanism_type})
   end
 
-  def open_session(slot, flags) do
-    GenServer.call(__MODULE__, {:open_session, slot, flags})
+  def open_session(server \\ __MODULE__, slot, flags) do
+    GenServer.call(server, {:open_session, slot, flags})
   end
 
   @doc """
@@ -181,9 +196,9 @@ defmodule P11ex.Module do
   `:ckr_user_already_logged_in`. Can also be set to `nil` to unregister
   a login.
   """
-  @spec register_login(atom() | nil) :: :ok
-  def register_login(user_type) do
-    GenServer.cast(__MODULE__, {:register_login, user_type})
+  @spec register_login(GenServer.server(), atom() | nil) :: :ok
+  def register_login(server \\ __MODULE__, user_type) do
+    GenServer.cast(server, {:register_login, user_type})
   end
 
   @doc """
@@ -192,9 +207,9 @@ defmodule P11ex.Module do
   is `:user` or `:so` (security officer) if a login has been registered, or
   `nil` if no login has been registered.
   """
-  @spec login_type() :: atom() | nil
-  def login_type do
-    GenServer.call(__MODULE__, :login_type)
+  @spec login_type(GenServer.server()) :: atom() | nil
+  def login_type(server \\ __MODULE__) do
+    GenServer.call(server, :login_type)
   end
 
   @doc """
@@ -203,9 +218,9 @@ defmodule P11ex.Module do
   perform operations on the module that are not otherwise provided by this
   library.
   """
-  @spec module_handle() :: reference()
-  def module_handle do
-    GenServer.call(__MODULE__, :module_handle)
+  @spec module_handle(GenServer.server()) :: reference()
+  def module_handle(server \\ __MODULE__) do
+    GenServer.call(server, :module_handle)
   end
 
   # Implementation of the GenServer callbacks
