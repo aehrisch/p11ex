@@ -49,6 +49,7 @@ defmodule P11ex.Module do
 
   @impl true
   def init(module_path) when is_binary(module_path) do
+    Process.flag(:trap_exit, true)
     Logger.info("init: module_path=#{module_path}")
     with {:ok, handle} <- Lib.load_module(module_path) do
       Logger.info("init: handle=#{inspect(handle)}")
@@ -278,6 +279,11 @@ defmodule P11ex.Module do
   @impl true
   def handle_cast({:register_login, user_type}, state) do
     {:noreply, %{state | logged_in: user_type}}
+  end
+
+  @impl true
+  def handle_info({:EXIT, _from, reason}, state) do
+    {:stop, reason, state}
   end
 
 end
