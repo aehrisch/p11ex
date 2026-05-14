@@ -92,13 +92,14 @@ defmodule P11ex.Session do
   @impl true
   @spec init(Keyword.t()) :: {:ok, map()} | {:error, atom()}
   def init(args) do
+    Process.flag(:trap_exit, true)
 
     module = Keyword.fetch!(args, :module)
     slot_id = Keyword.fetch!(args, :slot_id)
     flags = Keyword.get(args, :flags, [:rw_session, :serial_session])
 
-    Logger.info("session init: module_handle=#{inspect(module)}, slot_id=#{slot_id}, flags=#{inspect(flags)}")
-    case Lib.open_session(module.module_handle(), slot_id, flags) do
+    Logger.info("session init: module=#{inspect(module)}, slot_id=#{slot_id}, flags=#{inspect(flags)}")
+    case Module.open_session(module, slot_id, flags) do
       {:ok, session} ->
         Logger.debug("session opened successfully session=#{inspect(session)}")
         {:ok, %{module: module,
@@ -107,6 +108,15 @@ defmodule P11ex.Session do
                session: session}}
       {:error, err} ->
         {:stop, err}
+    end
+  end
+
+  @impl true
+  def terminate(_reason, state) do
+    Logger.info("session terminate: state=#{inspect(state)}")
+    case state do
+      %{module: module, session: session} -> Module.close_session(module, session)
+      _ -> :ok
     end
   end
 
@@ -845,6 +855,11 @@ defmodule P11ex.Session do
       {:ok, key_handle} -> {:reply, {:ok, key_handle}, state}
       err -> {:reply, err, state}
     end
+  end
+
+  @impl true
+  def handle_info({:EXIT, _from, reason}, state) do
+    {:stop, reason, state}
   end
 
 end

@@ -52,7 +52,7 @@ defmodule P11ex.Module do
     Logger.info("init: module_path=#{module_path}")
     with {:ok, handle} <- Lib.load_module(module_path) do
       Logger.info("init: handle=#{inspect(handle)}")
-      {:ok, %{handle: handle, logged_in: false}}
+      {:ok, %{handle: handle, logged_in: nil, session_count: 0}}
     end
   end
 
@@ -173,6 +173,10 @@ defmodule P11ex.Module do
     GenServer.call(__MODULE__, {:open_session, slot, flags})
   end
 
+  def close_session(server \\ MODULE, session_handle) do
+    GenServer.call(server, {:close_session, session_handle})
+  end
+
   @doc """
   Register a successful login for a token in the PKCS#11 slot managed
   by this instance of `P11ex.Module`. User type is `:user` or `:so`
@@ -257,7 +261,28 @@ defmodule P11ex.Module do
 
   @impl true
   def handle_call({:open_session, slot_id, flags}, _from, state) do
-    {:reply, Lib.open_session(state.handle, slot_id, flags), state}
+    case Lib.open_session(state.handle, slot_id, flags) do
+      {:ok, _} = result ->
+        {:reply, result, %{state | session_count: state.session_count + 1}}
+
+      result ->
+        {:reply, result, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:close_session, session_handle}, _from, state) do
+    case Lib.close_session(session_handle) do
+      :ok = result ->
+        if state.session_count > 1 do
+          {:reply, result, %{state | session_count: state.session_count - 1}}
+        else
+          {:reply, result, %{state | session_count: 0, logged_in: nil}}
+        end
+
+      result ->
+        {:reply, result, state}
+    end
   end
 
   @impl true
