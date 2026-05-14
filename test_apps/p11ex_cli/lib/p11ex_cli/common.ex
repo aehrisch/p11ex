@@ -159,12 +159,6 @@ defmodule P11exCli.Common do
   def login!(slot = %P11ex.Lib.Slot{}, options) do
     pin = get_pin!(options)
 
-    # Workaround: If the module was previously logged out, login_type might be nil
-    # Reset it to false to avoid case clause errors in P11ex.Session
-    if P11ex.Module.login_type() == nil do
-      P11ex.Module.register_login(false)
-    end
-
     with {:ok, session_pid} <- P11ex.Session.start_link([module: P11ex.Module, slot_id: slot.slot_id, flags: [:rw_session]]),
          :ok <- P11ex.Session.login(session_pid, :user, pin) do
       {:ok, session_pid}

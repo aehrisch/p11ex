@@ -52,7 +52,7 @@ defmodule P11ex.Module do
     Logger.info("init: module_path=#{module_path}")
     with {:ok, handle} <- Lib.load_module(module_path) do
       Logger.info("init: handle=#{inspect(handle)}")
-      {:ok, %{handle: handle, logged_in: false}}
+      {:ok, %{handle: handle, logged_in: nil}}
     end
   end
 
