@@ -85,7 +85,7 @@ defmodule P11ex.Session do
   end
 
   @doc """
-  Initialize the session `GenServer`. This requires the `:module` (a `P11ex.Lib.ModuleHandle.t()`)
+  Initialize the session `GenServer`. This requires the `:module` (a `GenServer.server()`)
   and the `:slot_id` (an integer) of the slot the session is opened on. Additionally, the `:flags`
   keyword argument can be used to pass additional flags to the `open_session/3` function.
   """
@@ -97,8 +97,8 @@ defmodule P11ex.Session do
     slot_id = Keyword.fetch!(args, :slot_id)
     flags = Keyword.get(args, :flags, [:rw_session, :serial_session])
 
-    Logger.info("session init: module_handle=#{inspect(module)}, slot_id=#{slot_id}, flags=#{inspect(flags)}")
-    case Lib.open_session(module.module_handle(), slot_id, flags) do
+    Logger.info("session init: module=#{inspect(module)}, slot_id=#{slot_id}, flags=#{inspect(flags)}")
+    case Lib.open_session(Module.module_handle(module), slot_id, flags) do
       {:ok, session} ->
         Logger.debug("session opened successfully session=#{inspect(session)}")
         {:ok, %{module: module,
@@ -576,19 +576,19 @@ defmodule P11ex.Session do
 
   @impl true
   def handle_call({:login, user_type, pin}, _from, state) do
-    logged_in_as = state.module.login_type()
+    logged_in_as = Module.login_type(state.module)
     Logger.debug("session login #{inspect(user_type)} logged_in_as=#{inspect(logged_in_as)}")
     case logged_in_as do
       ^user_type ->
         Logger.info("already logged in as #{user_type}")
-        Module.register_login(user_type)
+        Module.register_login(state.module, user_type)
         {:reply, :ok, state}
       false ->
         case Lib.session_login(state.session, user_type, pin) do
           :ok ->
             Logger.info("logged in as #{user_type}")
             # Notify Module of successful login
-            Module.register_login(user_type)
+            Module.register_login(state.module, user_type)
             {:reply, :ok, state}
           err -> {:reply, err, state}
         end
@@ -600,7 +600,7 @@ defmodule P11ex.Session do
     case Lib.session_logout(state.session) do
       :ok ->
         # Notify Module that we've logged out
-        Module.register_login(nil)
+        Module.register_login(state.module, nil)
         {:reply, :ok, state}
       err -> {:reply, err, state}
     end
