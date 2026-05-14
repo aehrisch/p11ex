@@ -29,7 +29,7 @@ The CLI tool is part of the p11ex test applications. To build and run it:
 ```bash
 cd test_apps/p11ex_cli
 mix deps.get
-mix compile
+mix escript.build
 ```
 
 ## Configuration
@@ -94,8 +94,8 @@ For automation and scripts, use environment variables:
 export P11EX_MODULE=/usr/lib/softhsm/libsofthsm2.so
 export P11EX_PIN=1234
 
-p11ex list-slots
-p11ex list-objects -l MyToken seck
+p11ex_cli list-slots
+p11ex_cli list-objects -l MyToken seck
 ```
 
 ### Using PIN Files
@@ -106,7 +106,7 @@ For enhanced security, store PINs in files:
 echo "1234" > /secure/path/pin.txt
 chmod 600 /secure/path/pin.txt
 
-p11ex list-objects -m /usr/lib/softhsm/libsofthsm2.so \
+p11ex_cli list-objects -m /usr/lib/softhsm/libsofthsm2.so \
   -l MyToken \
   --pin-file /secure/path/pin.txt \
   seck
@@ -120,7 +120,7 @@ Lists available PKCS#11 slots and their associated tokens.
 
 **Usage:**
 ```bash
-p11ex list-slots [OPTIONS]
+p11ex_cli list-slots [OPTIONS]
 ```
 
 **Options:**
@@ -161,7 +161,7 @@ Lists cryptographic objects (keys, certificates) stored in a token.
 
 **Usage:**
 ```bash
-p11ex list-objects [OPTIONS] <object_type>
+p11ex_cli list-objects [OPTIONS] <object_type>
 ```
 
 **Arguments:**
@@ -177,10 +177,10 @@ p11ex list-objects [OPTIONS] <object_type>
 **Example Usage:**
 ```bash
 # List all secret keys in text format
-p11ex list-objects -m /usr/lib/softhsm/libsofthsm2.so -l MyToken -f text seck
+p11ex_cli list-objects -m /usr/lib/softhsm/libsofthsm2.so -l MyToken -f text seck
 
 # List all private keys in JSON format
-p11ex list-objects -m /usr/lib/softhsm/libsofthsm2.so -l MyToken -f json prvk
+p11ex_cli list-objects -m /usr/lib/softhsm/libsofthsm2.so -l MyToken -f json prvk
 ```
 
 **Example Output (text format):**
@@ -217,7 +217,7 @@ Generates new AES key in the token.
 
 **Usage:**
 ```bash
-p11ex key-gen-aes [OPTIONS] <key_label> <key_length>
+p11ex_cli key-gen-aes [OPTIONS] <key_label> <key_length>
 ```
 
 **Arguments:**
@@ -239,10 +239,10 @@ p11ex key-gen-aes [OPTIONS] <key_label> <key_length>
 **Example Usage:**
 ```bash
 # Generate a 256-bit AES key for encryption/decryption
-p11ex key-gen-aes -m /usr/lib/softhsm/libsofthsm2.so -l MyToken "MyAESKey" 256
+p11ex_cli key-gen-aes -m /usr/lib/softhsm/libsofthsm2.so -l MyToken "MyAESKey" 256
 
 # Generate a key with specific ID and signing capabilities
-p11ex key-gen-aes -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli key-gen-aes -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   --key-id 48656C6C6F576F726C64 \
   --sign --verify \
   "MySigningKey" 256
@@ -260,7 +260,7 @@ Wraps (encrypts) a cryptographic key using another key (the wrapping key). The w
 
 **Usage:**
 ```bash
-p11ex key-wrap [OPTIONS] <mechanism> <wrapping_key_ref> <key_ref> <output_file>
+p11ex_cli key-wrap [OPTIONS] <mechanism> <wrapping_key_ref> <key_ref> <output_file>
 ```
 
 **Arguments:**
@@ -286,14 +286,14 @@ p11ex key-wrap [OPTIONS] <mechanism> <wrapping_key_ref> <key_ref> <output_file>
 **Example Usage:**
 ```bash
 # Wrap an AES key using another AES key, output as hex
-p11ex key-wrap -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli key-wrap -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   ckm_aes_key_wrap_pad \
   label:MyWrappingKey \
   label:MyKeyToWrap \
   wrapped_key.hex
 
 # Wrap a private key using RSA public key, output as base64
-p11ex key-wrap -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli key-wrap -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   --output-format base64 \
   ckm_rsa_pkcs_oaep \
   label:MyRSAPublicKey \
@@ -321,7 +321,7 @@ Unwraps (decrypts) a previously wrapped key and imports it into the token as a n
 
 **Usage:**
 ```bash
-p11ex key-unwrap [OPTIONS] <mechanism> <unwrapping_key_ref> <input_file>
+p11ex_cli key-unwrap [OPTIONS] <mechanism> <unwrapping_key_ref> <input_file>
 ```
 
 **Arguments:**
@@ -363,7 +363,7 @@ p11ex key-unwrap [OPTIONS] <mechanism> <unwrapping_key_ref> <input_file>
 **Example Usage:**
 ```bash
 # Unwrap an AES key from hex file
-p11ex key-unwrap -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli key-unwrap -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   --key-label "ImportedAESKey" \
   --key-type aes \
   --key-class seck \
@@ -373,7 +373,7 @@ p11ex key-unwrap -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   wrapped_key.hex
 
 # Unwrap an RSA private key from base64 file with specific attributes
-p11ex key-unwrap -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli key-unwrap -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   --input-format base64 \
   --key-label "ImportedRSAKey" \
   --key-id 48656c6c6f \
@@ -405,7 +405,7 @@ Generates a Key Check Value (KCV) for one or more secret keys. The KCV is comput
 
 **Usage:**
 ```bash
-p11ex kcv-gen [OPTIONS] <key_ref...>
+p11ex_cli kcv-gen [OPTIONS] <key_ref...>
 ```
 
 **Arguments:**
@@ -422,15 +422,15 @@ p11ex kcv-gen [OPTIONS] <key_ref...>
 **Example Usage:**
 ```bash
 # Generate KCV for a single key by label
-p11ex kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   label:MyAESKey
 
 # Generate KCVs for multiple keys
-p11ex kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   label:MyAESKey label:AnotherKey id:48656c6c6f
 
 # Generate KCV with JSON output
-p11ex kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli kcv-gen -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   -f json label:MyAESKey
 ```
 
@@ -480,7 +480,7 @@ Benchmarks AES-CBC encryption performance across various block sizes using paral
 
 **Usage:**
 ```bash
-p11ex bench-aes-encrypt-block [OPTIONS] <key_ref>
+p11ex_cli bench-aes-encrypt-block [OPTIONS] <key_ref>
 ```
 
 **Arguments:**
@@ -502,16 +502,16 @@ The benchmark uses configuration from `config.exs`:
 **Example Usage:**
 ```bash
 # Single session benchmark with default settings
-p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   label:MyAESKey
 
 # Multi-session benchmark with 4 parallel sessions
-p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   --number-sessions 4 \
   label:MyAESKey
 
 # Custom number of rounds per block size
-p11ex bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli bench-aes-encrypt-block -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   --rounds 20 \
   label:MyAESKey
 ```
@@ -586,7 +586,7 @@ Signs data with a private key using various signature mechanisms. Supports RSA P
 
 **Usage:**
 ```bash
-p11ex sign [OPTIONS] <mechanism> <digest> <key_ref> <input_file> <output_file>
+p11ex_cli sign [OPTIONS] <mechanism> <digest> <key_ref> <input_file> <output_file>
 ```
 
 **Arguments:**
@@ -623,14 +623,14 @@ p11ex sign [OPTIONS] <mechanism> <digest> <key_ref> <input_file> <output_file>
 **Example Usage:**
 ```bash
 # Sign raw data with RSA PKCS#1 v1.5 SHA-256 (token hashes)
-p11ex sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   rsa_pkcs sha256 \
   label:MyRSAPrivateKey \
   input_data.dat \
   signature.bin
 
 # Sign raw data with RSA PSS SHA-256 (CLI hashes, token signs PSS)
-p11ex sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   -f hex \
   rsa_pkcs_pss sha256 \
   label:MyRSAPrivateKey \
@@ -638,30 +638,30 @@ p11ex sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   signature.hex
 
 # Sign pre-computed hash with RSA PKCS#1 v1.5 (digest none)
-p11ex sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   rsa_pkcs_sha256 none \
   label:MyRSAPrivateKey \
   data_hash.dat \
   signature.bin
 
 # Sign pre-computed hash with ECDSA (digest none)
-p11ex sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   ecdsa_plain none \
   label:MyECPrivateKey \
   hash.dat \
   signature.bin
 
 # Sign raw data with ECDSA (CLI hashes with SHA-256)
-p11ex sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli sign -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   ecdsa_plain sha256 \
   label:MyECPrivateKey \
   input_data.dat \
   signature.hex
 
 # Sign a file and verify with OpenSSL
-p11ex export-pubk id:02 > rsa-pubk.pem
+p11ex_cli export-pubk id:02 > rsa-pubk.pem
 dd if=/dev/urandom count=100 bs=1024 of=100kb.bin
-p11ex sign rsa_pkcs sha256 id:02 100kb.bin sig.bin
+p11ex_cli sign rsa_pkcs sha256 id:02 100kb.bin sig.bin
 openssl dgst -sha256 -verify rsa-pubk.pem -signature sig.bin 100kb.bin
 ```
 
@@ -684,7 +684,7 @@ Exports a public key from the token as a PEM-encoded SubjectPublicKeyInfo (SPKI)
 
 **Usage:**
 ```bash
-p11ex export-pubk [OPTIONS] <key_ref>
+p11ex_cli export-pubk [OPTIONS] <key_ref>
 ```
 
 **Arguments:**
@@ -707,25 +707,25 @@ p11ex export-pubk [OPTIONS] <key_ref>
 **Example Usage:**
 ```bash
 # Export RSA public key to a file
-p11ex export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   label:MyRSAPublicKey > pubkey.pem
 
 # Inspect with OpenSSL
-p11ex export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   label:MyRSAPublicKey | openssl rsa -pubin -text -noout
 
-p11ex export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
+p11ex_cli export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken \
   label:MyECPublicKey | openssl ec -pubin -text -noout
 
 # Export then use for signature verification (see sign command)
-p11ex export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken label:MyKey > key.pem
+p11ex_cli export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken label:MyKey > key.pem
 openssl dgst -sha256 -verify key.pem -signature sig.bin datafile
 ```
 
 **Example Output:**
 ```
 # Command always writes PEM to stdout; redirect to file as needed
-p11ex export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken label:MyKey > key.pem
+p11ex_cli export-pubk -m /usr/lib/softhsm/libsofthsm2.so -l MyToken label:MyKey > key.pem
 
 # PEM uses the standard PUBLIC KEY wrapper
 -----BEGIN PUBLIC KEY-----
@@ -747,7 +747,7 @@ Shows help information for commands.
 
 **Usage:**
 ```bash
-p11ex help [subcommand]
+p11ex_cli help [subcommand]
 ```
 
 **Arguments:**
@@ -756,9 +756,9 @@ p11ex help [subcommand]
 **Examples:**
 ```bash
 # Show general usage
-p11ex help
+p11ex_cli help
 
 # Show help for specific command
-p11ex help list-objects
-p11ex help key-gen-aes
+p11ex_cli help list-objects
+p11ex_cli help key-gen-aes
 ```
