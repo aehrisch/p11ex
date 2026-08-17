@@ -1,3 +1,21 @@
+> [!IMPORTANT]
+> **This repository has moved to Codeberg.**
+>
+> Development of p11ex continues at
+> **<https://codeberg.org/aehrisch/p11ex>**.
+> All releases from **0.4.0** onward are developed and published there.
+>
+> This GitHub repository is archived and kept read-only for historical
+> reference. It will not receive further commits, releases, issues, or
+> pull requests.
+>
+> - Source and issue tracker: <https://codeberg.org/aehrisch/p11ex>
+> - Package: <https://hex.pm/packages/p11ex>
+> - Documentation: <https://hexdocs.pm/p11ex>
+>
+> If you have an open issue or pull request here, please re-file it on
+> Codeberg.
+
 [![SoftHSM Linux](https://github.com/aehrisch/p11ex/actions/workflows/softhsm-linux.yml/badge.svg)](https://github.com/aehrisch/p11ex/actions/workflows/softhsm-linux.yml)[![SoftHSM macOS](https://github.com/aehrisch/p11ex/actions/workflows/softhsm-macos.yml/badge.svg)](https://github.com/aehrisch/p11ex/actions/workflows/softhsm-macos.yml)[![p11ex_cli](https://github.com/aehrisch/p11ex/actions/workflows/p11ex-cli.yml/badge.svg)](https://github.com/aehrisch/p11ex/actions/workflows/p11ex-cli.yml)
 <div align="right">
   <img src="img/p11ex-logo-400x400.png" alt="p11ex logo" width="100">
